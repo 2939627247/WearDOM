@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Device Owner apps are not bound by <uses-policies> — the DO role grants
+    all DevicePolicyManager APIs automatically. We still declare policies here
+    so the system shows the correct description in Settings > Security.
+-->
+<device-admin>
+    <uses-policies>
+        <limit-password />
+        <watch-login />
+        <reset-password />
+        <force-lock />
+        <wipe-data />
+        <disable-camera />
+        <disable-keyguard-features />
+    </uses-policies>
+</device-admin>
