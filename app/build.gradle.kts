@@ -1,7 +1,9 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
+    // NOTE: kotlin-android (org.jetbrains.kotlin.android) is REMOVED.
+    // AGP 9.0+ bundles Kotlin compilation natively ("built-in Kotlin").
+    // Applying kotlin-android alongside AGP 9.x causes a hard build failure.
+    alias(libs.plugins.kotlin.compose)   // Compose compiler extension — still required
 }
 
 android {
@@ -30,14 +32,17 @@ android {
         compose = true
     }
 
-    // AGP 9.x: kotlinOptions removed; JVM target set via kotlin {} below
+    // Java source/target kept for non-Kotlin Java interop paths
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    // kotlinOptions{} was removed in AGP 9.x — use the top-level kotlin{} block below
 }
 
-// Kotlin 2.4 / AGP 9.x: canonical way to set JVM target + compiler flags
+// AGP 9.x + Kotlin 2.4: configure Kotlin compiler via the top-level kotlin{} block.
+// jvmToolchain(17) covers both the JVM target and the Java toolchain.
 kotlin {
     jvmToolchain(17)
 
