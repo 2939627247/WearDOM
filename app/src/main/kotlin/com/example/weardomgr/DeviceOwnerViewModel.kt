@@ -200,7 +200,7 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
                     )
                 }
             } else {
-                toast("无法修改 "${target.label}"（受保护）")
+                toast("无法修改「${target.label}」（受保护）")
             }
         }
     }

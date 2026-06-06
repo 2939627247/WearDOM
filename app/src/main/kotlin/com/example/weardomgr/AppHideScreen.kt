@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalWearMaterial3Api::class)
+
 package com.example.weardomgr
 
 import androidx.compose.foundation.background
@@ -23,23 +25,20 @@ import androidx.wear.compose.material3.*
 /**
  * App Hide/Show management screen.
  *
- * Uses two Device Owner-only APIs:
- *   • [DevicePolicyManager.setApplicationHidden]  — hides or shows an app
- *   • [DevicePolicyManager.isApplicationHidden]   — queries current visibility
+ * DO APIs used:
+ *   • [DevicePolicyManager.setApplicationHidden]  — hide or show an app
+ *   • [DevicePolicyManager.isApplicationHidden]   — query current visibility
  *
- * A hidden app disappears from the launcher and cannot be launched by the
- * user. Its data is untouched. Calling setApplicationHidden(…, false) makes
- * it visible again instantly.
+ * A hidden app disappears from the launcher and cannot be launched by the user.
+ * Its data is untouched. setApplicationHidden(…, false) restores it instantly.
  */
 @Composable
 fun AppHideScreen(vm: DeviceOwnerViewModel) {
     val state     by vm.state.collectAsState()
     val listState  = rememberScalingLazyListState()
 
-    // Load the app list once when the screen opens
     LaunchedEffect(Unit) { vm.loadApps() }
 
-    // Apply the search filter in the UI layer (no extra suspend needed)
     val displayedApps = remember(state.apps, state.appsFilter) {
         if (state.appsFilter.isBlank()) state.apps
         else state.apps.filter {
@@ -54,11 +53,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
     ) {
         if (state.isLoadingApps) {
-            // ── Loading spinner ──
-            Box(
-                modifier        = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else {
@@ -66,10 +61,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                 state               = listState,
                 modifier            = Modifier.fillMaxSize(),
                 contentPadding      = PaddingValues(
-                    top    = 40.dp,
-                    bottom = 32.dp,
-                    start  = 10.dp,
-                    end    = 10.dp,
+                    top = 40.dp, bottom = 32.dp, start = 10.dp, end = 10.dp,
                 ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -84,17 +76,14 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                         modifier  = Modifier.fillMaxWidth(),
                     )
                 }
-
                 item {
                     val total  = state.apps.size
                     val hidden = state.apps.count { it.isHidden }
                     Text(
                         text  = "共 $total 个 · 已隐藏 $hidden 个",
-                        style = MaterialTheme.typography.captionSmall,
-                        color = if (hidden > 0)
-                            MaterialTheme.colorScheme.error
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (hidden > 0) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -107,12 +96,12 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     )
                 }
 
-                // ── Inline message / toast ──
+                // ── Inline message ──
                 if (state.message != null) {
                     item {
                         Text(
                             text      = state.message!!,
-                            style     = MaterialTheme.typography.captionSmall,
+                            style     = MaterialTheme.typography.labelSmall,
                             color     = MaterialTheme.colorScheme.primary,
                             textAlign = TextAlign.Center,
                             modifier  = Modifier.fillMaxWidth(),
@@ -120,42 +109,26 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     }
                 }
 
-                // ── Section header: User apps ──
+                // ── User apps section ──
                 val userApps   = displayedApps.filter { !it.isSystemApp }
                 val systemApps = displayedApps.filter {  it.isSystemApp }
 
                 if (userApps.isNotEmpty()) {
                     item {
-                        ListHeader {
-                            Text(
-                                text  = "用户应用 (${userApps.size})",
-                                style = MaterialTheme.typography.captionSmall,
-                            )
-                        }
+                        ListHeader { Text("用户应用 (${userApps.size})") }
                     }
                     items(userApps, key = { it.packageName }) { app ->
-                        AppHideRow(
-                            app      = app,
-                            onToggle = { vm.toggleHidden(app.packageName) },
-                        )
+                        AppHideRow(app = app, onToggle = { vm.toggleHidden(app.packageName) })
                     }
                 }
 
-                // ── Section header: System apps ──
+                // ── System apps section ──
                 if (systemApps.isNotEmpty()) {
                     item {
-                        ListHeader {
-                            Text(
-                                text  = "系统应用 (${systemApps.size})",
-                                style = MaterialTheme.typography.captionSmall,
-                            )
-                        }
+                        ListHeader { Text("系统应用 (${systemApps.size})") }
                     }
                     items(systemApps, key = { it.packageName }) { app ->
-                        AppHideRow(
-                            app      = app,
-                            onToggle = { vm.toggleHidden(app.packageName) },
-                        )
+                        AppHideRow(app = app, onToggle = { vm.toggleHidden(app.packageName) })
                     }
                 }
 
@@ -170,16 +143,13 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     }
                 }
 
-                // ── DO API note ──
                 item {
                     Text(
-                        text = "使用 DO API:\nsetApplicationHidden()\nisApplicationHidden()",
-                        style     = MaterialTheme.typography.captionMicro,
+                        text      = "DO API: setApplicationHidden()\nisApplicationHidden()",
+                        style     = MaterialTheme.typography.labelSmall,
                         color     = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
-                        modifier  = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 6.dp),
+                        modifier  = Modifier.fillMaxWidth().padding(top = 6.dp),
                     )
                 }
             }
@@ -187,16 +157,14 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
     }
 }
 
-// ─────────────────────────── Sub-composables ─────────────────────────────────
+// ─────────────────────── AppHideRow ─────────────────────────────────────────
 
 /**
- * One row in the app list.
+ * One row per app — uses [SplitToggleButton] (the canonical Wear OS M3 component
+ * for a list item with a separate toggle area).
  *
- * Uses [SplitToggleButton] — the canonical Wear OS Material3 component for
- * a list item that has both a tappable label area and a dedicated toggle control.
- *
- *   Left side  (onClick)         → reserved for future "app info" action
- *   Right side (onCheckedChange) → calls [onToggle] to hide/show the app
+ * Left  (onClick)           → also toggles (same action for ease of use)
+ * Right (onCheckedChange)   → [Switch] toggle
  */
 @Composable
 private fun AppHideRow(
@@ -205,17 +173,11 @@ private fun AppHideRow(
     modifier: Modifier = Modifier,
 ) {
     SplitToggleButton(
-        checked           = app.isHidden,
-        onCheckedChange   = { onToggle() },
-        onClick           = { onToggle() },    // tapping the label also toggles
-        toggleControl     = { Switch() },       // Switch inherits checked/enabled from scope
-        modifier          = modifier.fillMaxWidth(),
-        colors            = SplitToggleButtonDefaults.splitToggleButtonColors(
-            checkedContainerColor        = MaterialTheme.colorScheme.errorContainer,
-            checkedContentColor          = MaterialTheme.colorScheme.onErrorContainer,
-            checkedSecondaryContentColor = MaterialTheme.colorScheme.onErrorContainer,
-            checkedSplitContainerColor   = MaterialTheme.colorScheme.error.copy(alpha = 0.25f),
-        ),
+        checked         = app.isHidden,
+        onCheckedChange = { onToggle() },
+        onClick         = { onToggle() },
+        toggleControl   = { Switch() },
+        modifier        = modifier.fillMaxWidth(),
     ) {
         Column(
             modifier            = Modifier
@@ -225,17 +187,17 @@ private fun AppHideRow(
         ) {
             Text(
                 text     = app.label,
-                style    = MaterialTheme.typography.captionDefault,
+                style    = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text  = when {
-                    app.isHidden   -> "已隐藏"
+                    app.isHidden    -> "已隐藏"
                     app.isSystemApp -> "系统 · 可见"
-                    else           -> "可见"
+                    else            -> "可见"
                 },
-                style = MaterialTheme.typography.captionMicro,
+                style = MaterialTheme.typography.labelSmall,
                 color = when {
                     app.isHidden    -> MaterialTheme.colorScheme.error
                     app.isSystemApp -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -246,28 +208,29 @@ private fun AppHideRow(
     }
 }
 
-/** Compact search / filter field for the app list. */
+// ─────────────────────── Search field ───────────────────────────────────────
+
 @Composable
 private fun AppSearchField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape       = RoundedCornerShape(20.dp)      // pill shape
+    val shape       = RoundedCornerShape(20.dp)
     val borderColor = MaterialTheme.colorScheme.outline
-    val surfaceColor= MaterialTheme.colorScheme.surface
+    val bgColor     = MaterialTheme.colorScheme.surface
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(color = surfaceColor, shape = shape)
+            .background(color = bgColor, shape = shape)
             .border(width = 1.dp, color = borderColor, shape = shape)
             .padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
         if (value.isEmpty()) {
             Text(
-                text  = "🔍  搜索应用…",
-                style = MaterialTheme.typography.captionSmall,
+                text  = "搜索应用…",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             )
         }
@@ -279,7 +242,7 @@ private fun AppSearchField(
                 keyboardType = KeyboardType.Text,
                 imeAction    = ImeAction.Search,
             ),
-            textStyle = MaterialTheme.typography.captionDefault.copy(
+            textStyle   = MaterialTheme.typography.bodySmall.copy(
                 color = MaterialTheme.colorScheme.onSurface,
             ),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),

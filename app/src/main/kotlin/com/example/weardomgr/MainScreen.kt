@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalWearMaterial3Api::class)
+
 package com.example.weardomgr
 
 import androidx.compose.foundation.layout.*
@@ -16,8 +18,8 @@ fun MainScreen(
     onProxy: () -> Unit,
     onAppHide: () -> Unit,
 ) {
-    val state    by vm.state.collectAsState()
-    val listState = rememberScalingLazyListState()
+    val state     by vm.state.collectAsState()
+    val listState  = rememberScalingLazyListState()
 
     LaunchedEffect(Unit) { vm.refreshOwnerStatus() }
 
@@ -27,19 +29,15 @@ fun MainScreen(
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
     ) {
         ScalingLazyColumn(
-            state             = listState,
-            modifier          = Modifier.fillMaxSize(),
-            contentPadding    = PaddingValues(
-                top    = 40.dp,
-                bottom = 32.dp,
-                start  = 12.dp,
-                end    = 12.dp,
+            state               = listState,
+            modifier            = Modifier.fillMaxSize(),
+            contentPadding      = PaddingValues(
+                top = 40.dp, bottom = 32.dp, start = 12.dp, end = 12.dp,
             ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
 
-            // ── Title ──
             item {
                 Text(
                     text      = "WearDOM",
@@ -49,30 +47,23 @@ fun MainScreen(
                 )
             }
 
-            // ── Device Owner status badge ──
-            item {
-                DoStatusBadge(isOwner = state.isDeviceOwner)
-            }
+            item { DoStatusBadge(isOwner = state.isDeviceOwner) }
 
             if (state.isDeviceOwner) {
 
-                // ── HTTP Proxy navigation button ──
                 item {
                     FilledTonalButton(
-                        onClick   = onProxy,
-                        modifier  = Modifier.fillMaxWidth(),
+                        onClick  = onProxy,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(
-                                text  = "HTTP 代理",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                            Text("HTTP 代理", style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 text  = state.activeProxy?.toString() ?: "未设置",
-                                style = MaterialTheme.typography.captionSmall,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = if (state.activeProxy != null)
                                     MaterialTheme.colorScheme.primary
                                 else
@@ -82,7 +73,6 @@ fun MainScreen(
                     }
                 }
 
-                // ── App Hide navigation button ──
                 item {
                     FilledTonalButton(
                         onClick  = onAppHide,
@@ -92,14 +82,11 @@ fun MainScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(
-                                text  = "应用隐藏",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                            Text("应用隐藏", style = MaterialTheme.typography.bodyMedium)
                             val hiddenCount = state.apps.count { it.isHidden }
                             Text(
                                 text  = if (hiddenCount > 0) "已隐藏 $hiddenCount 个" else "暂无隐藏",
-                                style = MaterialTheme.typography.captionSmall,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = if (hiddenCount > 0)
                                     MaterialTheme.colorScheme.error
                                 else
@@ -111,7 +98,6 @@ fun MainScreen(
 
             } else {
 
-                // ── Guidance when DO is not active ──
                 item {
                     Text(
                         text      = "需要 Device Owner 权限",
@@ -124,7 +110,7 @@ fun MainScreen(
                 item {
                     Text(
                         text      = "通过 ADB 激活:",
-                        style     = MaterialTheme.typography.captionSmall,
+                        style     = MaterialTheme.typography.labelSmall,
                         color     = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                     )
@@ -132,11 +118,9 @@ fun MainScreen(
                 item {
                     Text(
                         text = "adb shell dpm set-device-owner\ncom.example.weardomgr/\n.WearDeviceAdminReceiver",
-                        style     = MaterialTheme.typography.captionMicro,
+                        style     = MaterialTheme.typography.labelSmall,
                         textAlign = TextAlign.Center,
-                        modifier  = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp),
+                        modifier  = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                     )
                 }
             }
@@ -146,28 +130,24 @@ fun MainScreen(
 
 @Composable
 private fun DoStatusBadge(isOwner: Boolean) {
-    val containerColor = if (isOwner)
-        MaterialTheme.colorScheme.primaryContainer
-    else
-        MaterialTheme.colorScheme.errorContainer
-
-    val contentColor = if (isOwner)
-        MaterialTheme.colorScheme.onPrimaryContainer
-    else
-        MaterialTheme.colorScheme.onErrorContainer
-
     Button(
-        onClick  = { /* informational only */ },
+        onClick  = {},
         enabled  = false,
         modifier = Modifier.fillMaxWidth(),
         colors   = ButtonDefaults.buttonColors(
-            disabledContainerColor = containerColor,
-            disabledContentColor   = contentColor,
+            disabledContainerColor = if (isOwner)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.errorContainer,
+            disabledContentColor = if (isOwner)
+                MaterialTheme.colorScheme.onPrimaryContainer
+            else
+                MaterialTheme.colorScheme.onErrorContainer,
         ),
     ) {
         Text(
             text  = if (isOwner) "✓  Device Owner 已激活" else "✗  未激活",
-            style = MaterialTheme.typography.captionDefault,
+            style = MaterialTheme.typography.bodySmall,
         )
     }
 }

@@ -10,8 +10,8 @@ android {
 
     defaultConfig {
         applicationId = "com.example.weardomgr"
-        minSdk        = 30          // Wear OS 3.x minimum
-        targetSdk     = 36          // Android 16
+        minSdk        = 30
+        targetSdk     = 36
         versionCode   = 1
         versionName   = "1.0"
     }
@@ -35,11 +35,18 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // Kotlin 2.x: use compilerOptions instead of deprecated kotlinOptions
     kotlinOptions {
         jvmTarget = "17"
-        freeCompilerArgs += listOf(
+    }
+}
+
+// Module-wide opt-ins via Kotlin Gradle plugin task (Kotlin 2.x compatible)
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.addAll(
             "-opt-in=androidx.wear.compose.material3.ExperimentalWearMaterial3Api",
-            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi"
+            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
         )
     }
 }
