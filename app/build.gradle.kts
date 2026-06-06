@@ -5,8 +5,8 @@ plugins {
 }
 
 android {
-    namespace   = "com.example.weardomgr"
-    compileSdk  = 36
+    namespace  = "com.example.weardomgr"
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.weardomgr"
@@ -30,23 +30,23 @@ android {
         compose = true
     }
 
+    // AGP 9.x: kotlinOptions removed; JVM target set via kotlin {} below
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    // Kotlin 2.x: use compilerOptions instead of deprecated kotlinOptions
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 }
 
-// Module-wide opt-ins via Kotlin Gradle plugin task (Kotlin 2.x compatible)
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+// Kotlin 2.4 / AGP 9.x: canonical way to set JVM target + compiler flags
+kotlin {
+    jvmToolchain(17)
+
     compilerOptions {
         freeCompilerArgs.addAll(
-            "-opt-in=androidx.wear.compose.material3.ExperimentalWearMaterial3Api",
-            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
+            listOf(
+                "-opt-in=androidx.wear.compose.material3.ExperimentalWearMaterial3Api",
+                "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
+            )
         )
     }
 }
@@ -59,7 +59,7 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.coroutines.android)
 
-    // Compose BOM — pins all androidx.compose.* versions
+    // Compose BOM 2026.05.01
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
