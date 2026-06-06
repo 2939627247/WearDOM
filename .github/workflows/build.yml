@@ -1,0 +1,73 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:            # 允许在 GitHub UI 手动触发
+
+# 同一分支只保留最新一次构建，旧的自动取消
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Assemble Debug APK (API 36)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+
+      # ── 1. 检出代码 ──────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. JDK 17 ────────────────────────────────────────────────────────
+      - name: Set up JDK 17 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # ── 3. Android SDK — 安装 API 36 平台 ───────────────────────────────
+      # ubuntu-latest 预装了 Android SDK，但 API 36 需要手动安装。
+      - name: Install Android SDK Platform 36
+        run: |
+          echo "y" | \
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+              "platforms;android-36" \
+              "build-tools;35.0.1" \
+          2>&1 | grep -Ev "^Warning|^Parsing|^\[="
+
+      # ── 4. Gradle 8.13 ──────────────────────────────────────────────────
+      # gradle-version 指定时不需要仓库内的 Gradle Wrapper 文件。
+      # setup-gradle 会自动缓存 ~/.gradle 以加速后续构建。
+      - name: Setup Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      # ── 5. 编译 Debug APK ────────────────────────────────────────────────
+      - name: Assemble Debug APK
+        run: gradle :app:assembleDebug
+        env:
+          # CI 环境推荐关闭 Daemon 和增量编译，保证构建干净可重现
+          GRADLE_OPTS: >-
+            -Dorg.gradle.daemon=false
+            -Dkotlin.incremental=false
+            -Dandroid.useAndroidX=true
+
+      # ── 6. 上传 APK 产物 ─────────────────────────────────────────────────
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          # 文件名含构建编号，方便区分历史产物
+          name: WearDOM-debug-${{ github.run_number }}
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
