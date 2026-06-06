@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalWearMaterial3Api::class)
-
 package com.example.weardomgr
 
 import android.os.Bundle

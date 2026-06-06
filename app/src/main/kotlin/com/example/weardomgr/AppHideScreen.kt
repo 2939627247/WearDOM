@@ -1,14 +1,23 @@
-@file:OptIn(ExperimentalWearMaterial3Api::class)
-
 package com.example.weardomgr
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
@@ -18,19 +27,29 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.*
+import androidx.wear.compose.foundation.lazy.items
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.ListHeader
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.PositionIndicator
+import androidx.wear.compose.material3.Scaffold
+import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.TimeText
+import androidx.wear.compose.material3.Vignette
+import androidx.wear.compose.material3.VignettePosition
 
 /**
  * App Hide/Show management screen.
  *
  * DO APIs used:
- *   • [DevicePolicyManager.setApplicationHidden]  — hide or show an app
- *   • [DevicePolicyManager.isApplicationHidden]   — query current visibility
+ *   • DevicePolicyManager.setApplicationHidden  — hide or show an app
+ *   • DevicePolicyManager.isApplicationHidden   — query current visibility
  *
- * A hidden app disappears from the launcher and cannot be launched by the user.
- * Its data is untouched. setApplicationHidden(…, false) restores it instantly.
+ * A hidden app disappears from the launcher; its data is untouched.
+ * setApplicationHidden(false) restores it instantly.
  */
 @Composable
 fun AppHideScreen(vm: DeviceOwnerViewModel) {
@@ -67,7 +86,6 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
 
-                // ── Title + stats ──
                 item {
                     Text(
                         text      = "应用隐藏管理",
@@ -76,6 +94,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                         modifier  = Modifier.fillMaxWidth(),
                     )
                 }
+
                 item {
                     val total  = state.apps.size
                     val hidden = state.apps.count { it.isHidden }
@@ -88,7 +107,6 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     )
                 }
 
-                // ── Search filter ──
                 item {
                     AppSearchField(
                         value         = state.appsFilter,
@@ -96,7 +114,6 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     )
                 }
 
-                // ── Inline message ──
                 if (state.message != null) {
                     item {
                         Text(
@@ -109,24 +126,18 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     }
                 }
 
-                // ── User apps section ──
                 val userApps   = displayedApps.filter { !it.isSystemApp }
                 val systemApps = displayedApps.filter {  it.isSystemApp }
 
                 if (userApps.isNotEmpty()) {
-                    item {
-                        ListHeader { Text("用户应用 (${userApps.size})") }
-                    }
+                    item { ListHeader { Text("用户应用 (${userApps.size})") } }
                     items(userApps, key = { it.packageName }) { app ->
                         AppHideRow(app = app, onToggle = { vm.toggleHidden(app.packageName) })
                     }
                 }
 
-                // ── System apps section ──
                 if (systemApps.isNotEmpty()) {
-                    item {
-                        ListHeader { Text("系统应用 (${systemApps.size})") }
-                    }
+                    item { ListHeader { Text("系统应用 (${systemApps.size})") } }
                     items(systemApps, key = { it.packageName }) { app ->
                         AppHideRow(app = app, onToggle = { vm.toggleHidden(app.packageName) })
                     }
@@ -160,11 +171,8 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
 // ─────────────────────── AppHideRow ─────────────────────────────────────────
 
 /**
- * One row per app — uses [SplitToggleButton] (the canonical Wear OS M3 component
- * for a list item with a separate toggle area).
- *
- * Left  (onClick)           → also toggles (same action for ease of use)
- * Right (onCheckedChange)   → [Switch] toggle
+ * Uses Button + Row instead of SplitToggleButton to avoid experimental-API
+ * dependency. Tapping anywhere on the row toggles the app's hidden state.
  */
 @Composable
 private fun AppHideRow(
@@ -172,37 +180,50 @@ private fun AppHideRow(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SplitToggleButton(
-        checked         = app.isHidden,
-        onCheckedChange = { onToggle() },
-        onClick         = { onToggle() },
-        toggleControl   = { Switch() },
-        modifier        = modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier            = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text     = app.label,
-                style    = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+    Button(
+        onClick  = onToggle,
+        modifier = modifier.fillMaxWidth(),
+        colors   = if (app.isHidden)
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor   = MaterialTheme.colorScheme.onErrorContainer,
             )
+        else
+            ButtonDefaults.filledTonalButtonColors(),
+    ) {
+        Row(
+            modifier            = Modifier.fillMaxWidth(),
+            verticalAlignment   = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text     = app.label,
+                    style    = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text  = when {
+                        app.isHidden    -> "已隐藏"
+                        app.isSystemApp -> "系统 · 可见"
+                        else            -> "可见"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = when {
+                        app.isHidden    -> MaterialTheme.colorScheme.error
+                        app.isSystemApp -> MaterialTheme.colorScheme.onSurfaceVariant
+                        else            -> MaterialTheme.colorScheme.primary
+                    },
+                )
+            }
             Text(
-                text  = when {
-                    app.isHidden    -> "已隐藏"
-                    app.isSystemApp -> "系统 · 可见"
-                    else            -> "可见"
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = when {
-                    app.isHidden    -> MaterialTheme.colorScheme.error
-                    app.isSystemApp -> MaterialTheme.colorScheme.onSurfaceVariant
-                    else            -> MaterialTheme.colorScheme.primary
-                },
+                text  = if (app.isHidden) "●" else "○",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (app.isHidden)
+                    MaterialTheme.colorScheme.error
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
