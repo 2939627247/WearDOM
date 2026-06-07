@@ -34,7 +34,7 @@ fun MainScreen(
         timeText          = { TimeText() },
         vignette          = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
-    ) {
+    ) { _ ->
         ScalingLazyColumn(
             state               = listState,
             modifier            = Modifier.fillMaxSize(),
