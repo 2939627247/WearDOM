@@ -19,12 +19,21 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Keep debuggable for local ADB installs during development
+            isDebuggable    = true
+            isMinifyEnabled = false
+        }
         release {
-            isMinifyEnabled = true
+            isMinifyEnabled  = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Sign with the default debug key so CI can produce an installable APK
+            // without managing a separate signing keystore.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

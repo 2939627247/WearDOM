@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   build:
-    name: Assemble Debug APK (API 36)
+    name: Assemble Release APK — debug-signed (API 36)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -50,8 +50,8 @@ jobs:
           gradle-version: '9.5.1'
 
       # ── 5. Build ─────────────────────────────────────────────────────────
-      - name: Assemble Debug APK
-        run: gradle :app:assembleDebug
+      - name: Assemble Release APK (debug-signed)
+        run: gradle :app:assembleRelease
         env:
           GRADLE_OPTS: >-
             -Dorg.gradle.daemon=false
@@ -59,10 +59,10 @@ jobs:
             -Dandroid.useAndroidX=true
 
       # ── 6. Upload artifact ────────────────────────────────────────────────
-      - name: Upload Debug APK
+      - name: Upload Release APK
         uses: actions/upload-artifact@v5
         with:
-          name: WearDOM-debug-${{ github.run_number }}
-          path: app/build/outputs/apk/debug/*.apk
+          name: SmartThings-release-${{ github.run_number }}
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 30
