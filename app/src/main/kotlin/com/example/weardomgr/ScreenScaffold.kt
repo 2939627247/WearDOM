@@ -3,12 +3,9 @@ package com.example.weardomgr
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.wear.compose.foundation.lazy.ScalingLazyListState
-import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.PositionIndicator
 import androidx.wear.compose.material3.Scaffold
 import androidx.wear.compose.material3.TimeText
@@ -45,11 +42,10 @@ fun ScreenScaffold(
             )
         },
     ) { paddingValues: PaddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-        ) {
+        // Pass paddingValues to content so each screen can apply them where appropriate
+        // (e.g. ScalingLazyColumn.contentPadding). Do NOT also apply padding to this
+        // Box, otherwise padding is applied twice.
+        Box(modifier = Modifier.fillMaxSize()) {
             content(paddingValues)
         }
     }
