@@ -31,17 +31,14 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
     val listState  = rememberScalingLazyListState()
     val input      = state.proxyInput
 
-    Scaffold(
-        timeText          = { TimeText() },
-        vignette          = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
-        positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
-    ) {
+    ScreenScaffold(
+        scrollState = listState,
+        timeText = { TimeText() },
+    ) { contentPadding ->
         ScalingLazyColumn(
             state               = listState,
             modifier            = Modifier.fillMaxSize(),
-            contentPadding      = PaddingValues(
-                top = 40.dp, bottom = 32.dp, start = 14.dp, end = 14.dp,
-            ),
+            contentPadding      = contentPadding,
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
