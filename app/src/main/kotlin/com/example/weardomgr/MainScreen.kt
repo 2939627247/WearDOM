@@ -8,7 +8,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.*
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
+import androidx.wear.compose.material3.FilledTonalButton
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.PositionIndicator
+import androidx.wear.compose.material3.Scaffold
+import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.TimeText
+import androidx.wear.compose.material3.Vignette
+import androidx.wear.compose.material3.VignettePosition
 
 @Composable
 fun MainScreen(
