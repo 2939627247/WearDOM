@@ -42,10 +42,9 @@ fun ScreenScaffold(
         positionIndicator = {
             PositionIndicator(
                 scalingLazyListState = scrollState,
-                modifier = Modifier.align(Alignment.CenterEnd),
             )
         },
-    ) { paddingValues ->
+    ) { paddingValues: PaddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
