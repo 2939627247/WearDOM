@@ -205,6 +205,40 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ──────────────────────── Main-screen quick-actions ──────────────────────
+
+    /**
+     * Toggle proxy on/off from the main screen switch.
+     * ON → OFF: clears the proxy.
+     * OFF → ON: applies whatever is in [ProxyInput] (host must be non-blank).
+     */
+    fun toggleProxy() {
+        if (_state.value.activeProxy != null) {
+            clearProxy()
+        } else {
+            applyProxy()
+        }
+    }
+
+    /**
+     * Unhide every currently-hidden app (main-screen "App Hide" switch → OFF).
+     */
+    fun unhideAll() = viewModelScope.launch {
+        safe("显示全部") {
+            val hidden = _state.value.apps.filter { it.isHidden }
+            hidden.forEach { app ->
+                dpm.setApplicationHidden(admin, app.packageName, false)
+            }
+            _state.update { s ->
+                s.copy(apps = s.apps.map { it.copy(isHidden = false) })
+            }
+            toast("✓ 已显示 ${hidden.size} 个应用")
+        }
+    }
+
+    /** Called when a feature switch is tapped but the app is not Device Owner. */
+    fun notifyNotAdmin() = toast("This app is not an admin.")
+
     // ──────────────────────── Helpers ────────────────────────────────────────
 
     fun clearMessage() = _state.update { it.copy(message = null) }

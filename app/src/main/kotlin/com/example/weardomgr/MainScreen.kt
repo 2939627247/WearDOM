@@ -11,15 +11,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.Button
-import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.SplitToggleButton
+import androidx.wear.compose.material3.Switch
 import androidx.wear.compose.material3.Text
 
 @Composable
@@ -30,99 +31,81 @@ fun MainScreen(
 ) {
     val state     by vm.state.collectAsState()
     val listState  = rememberScalingLazyListState()
+    val isAdmin    = state.isDeviceOwner
+    val hiddenCount = state.apps.count { it.isHidden }
 
     LaunchedEffect(Unit) { vm.refreshOwnerStatus() }
 
-    // ScreenScaffold: handles TimeText + ScrollIndicator automatically
     ScreenScaffold(scrollState = listState) {
         ScalingLazyColumn(
             state               = listState,
             modifier            = Modifier.fillMaxWidth(),
             contentPadding      = PaddingValues(
-                top = 40.dp, bottom = 32.dp, start = 12.dp, end = 12.dp,
+                top = 40.dp, bottom = 32.dp, start = 8.dp, end = 8.dp,
             ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
 
+            // ── Title ──────────────────────────────────────────────────────
             item {
                 Text(
-                    text      = "WearDOM",
+                    text      = "SmartThings",
                     style     = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
                     modifier  = Modifier.fillMaxWidth(),
                 )
             }
 
-            item { DoStatusBadge(isOwner = state.isDeviceOwner) }
+            // ── HTTP Proxy card ────────────────────────────────────────────
+            item {
+                FeatureCard(
+                    title    = "HTTP Proxy",
+                    subtitle = state.activeProxy?.toString() ?: "未配置",
+                    checked  = state.activeProxy != null,
+                    isAdmin  = isAdmin,
+                    // Switch: toggle proxy on/off; shows toast when not admin
+                    onToggle = {
+                        if (isAdmin) vm.toggleProxy() else vm.notifyNotAdmin()
+                    },
+                    // Card body: always navigates to proxy settings
+                    onCardClick = onProxy,
+                )
+            }
 
-            if (state.isDeviceOwner) {
-                item {
-                    FilledTonalButton(
-                        onClick  = onProxy,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("HTTP 代理", style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                text  = state.activeProxy?.toString() ?: "未设置",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (state.activeProxy != null)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+            // ── App Hide card ──────────────────────────────────────────────
+            item {
+                FeatureCard(
+                    title    = "App Hide",
+                    subtitle = when {
+                        !isAdmin    -> "需要 Device Owner"
+                        hiddenCount > 0 -> "已隐藏 $hiddenCount 个应用"
+                        else        -> "无隐藏应用"
+                    },
+                    checked  = hiddenCount > 0,
+                    isAdmin  = isAdmin,
+                    // Switch ON→OFF: unhide all;  OFF→ON: open settings to configure
+                    onToggle = {
+                        when {
+                            !isAdmin        -> vm.notifyNotAdmin()
+                            hiddenCount > 0 -> vm.unhideAll()   // turn off = show all
+                            else            -> onAppHide()       // turn on  = go configure
                         }
-                    }
-                }
+                    },
+                    onCardClick = onAppHide,
+                )
+            }
 
-                item {
-                    FilledTonalButton(
-                        onClick  = onAppHide,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("应用隐藏", style = MaterialTheme.typography.bodyMedium)
-                            val hiddenCount = state.apps.count { it.isHidden }
-                            Text(
-                                text  = if (hiddenCount > 0) "已隐藏 $hiddenCount 个" else "暂无隐藏",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (hiddenCount > 0)
-                                    MaterialTheme.colorScheme.error
-                                else
-                                    MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-            } else {
+            // ── Toast message ──────────────────────────────────────────────
+            if (state.message != null) {
                 item {
                     Text(
-                        text      = "需要 Device Owner 权限",
-                        style     = MaterialTheme.typography.bodyMedium,
-                        color     = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center,
-                        modifier  = Modifier.fillMaxWidth(),
-                    )
-                }
-                item {
-                    Text(
-                        text      = "通过 ADB 激活:",
+                        text      = state.message!!,
                         style     = MaterialTheme.typography.labelSmall,
-                        color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-                item {
-                    Text(
-                        text = "adb shell dpm set-device-owner\ncom.example.weardomgr/\n.WearDeviceAdminReceiver",
-                        style     = MaterialTheme.typography.labelSmall,
+                        color     = if (state.message!!.contains("not an admin"))
+                                        MaterialTheme.colorScheme.error
+                                    else
+                                        MaterialTheme.colorScheme.primary,
                         textAlign = TextAlign.Center,
                         modifier  = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                     )
@@ -132,26 +115,57 @@ fun MainScreen(
     }
 }
 
+// ─────────────────────── FeatureCard ─────────────────────────────────────────
+
+/**
+ * A Wear OS split-toggle card:
+ *  • Left area (card body) → always clickable → navigates to settings
+ *  • Right area (switch)   → toggles the feature when admin;
+ *                            shows "not an admin" toast otherwise
+ *
+ * When [isAdmin] is false the card text is dimmed to signal the restriction,
+ * but the card itself remains tappable so the user can still explore settings.
+ */
 @Composable
-private fun DoStatusBadge(isOwner: Boolean) {
-    Button(
-        onClick  = {},
-        enabled  = false,
-        modifier = Modifier.fillMaxWidth(),
-        colors   = ButtonDefaults.buttonColors(
-            disabledContainerColor = if (isOwner)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.errorContainer,
-            disabledContentColor = if (isOwner)
-                MaterialTheme.colorScheme.onPrimaryContainer
-            else
-                MaterialTheme.colorScheme.onErrorContainer,
-        ),
+private fun FeatureCard(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    isAdmin: Boolean,
+    onToggle: () -> Unit,
+    onCardClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    SplitToggleButton(
+        checked         = checked,
+        onCheckedChange = { onToggle() },
+        onClick         = onCardClick,         // always navigable
+        toggleControl   = { Switch() },
+        modifier        = modifier.fillMaxWidth(),
+        // keep enabled=true so the card-click still fires when not admin
+        enabled         = true,
     ) {
-        Text(
-            text  = if (isOwner) "✓  Device Owner 已激活" else "✗  未激活",
-            style = MaterialTheme.typography.bodySmall,
-        )
+        Column(
+            modifier            = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                // dim text when no admin rights, but keep card tappable
+                .alpha(if (isAdmin) 1f else 0.45f),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text     = title,
+                style    = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text     = subtitle,
+                style    = MaterialTheme.typography.labelSmall,
+                color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
