@@ -27,30 +27,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.foundation.lazy.items
+import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.PositionIndicator
-import androidx.wear.compose.material3.Scaffold
+import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.TimeText
-import androidx.wear.compose.material3.Vignette
-import androidx.wear.compose.material3.VignettePosition
 
-/**
- * App Hide/Show management screen.
- *
- * DO APIs used:
- *   • DevicePolicyManager.setApplicationHidden  — hide or show an app
- *   • DevicePolicyManager.isApplicationHidden   — query current visibility
- *
- * A hidden app disappears from the launcher; its data is untouched.
- * setApplicationHidden(false) restores it instantly.
- */
 @Composable
 fun AppHideScreen(vm: DeviceOwnerViewModel) {
     val state     by vm.state.collectAsState()
@@ -66,11 +52,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
         }
     }
 
-    Scaffold(
-        timeText          = { TimeText() },
-        vignette          = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
-        positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
-    ) { _ ->
+    ScreenScaffold(scrollState = listState) {
         if (state.isLoadingApps) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -168,12 +150,6 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
     }
 }
 
-// ─────────────────────── AppHideRow ─────────────────────────────────────[...]
-
-/**
- * Uses Button + Row instead of SplitToggleButton to avoid experimental-API
- * dependency. Tapping anywhere on the row toggles the app's hidden state.
- */
 @Composable
 private fun AppHideRow(
     app: AppItem,
@@ -192,8 +168,8 @@ private fun AppHideRow(
             ButtonDefaults.filledTonalButtonColors(),
     ) {
         Row(
-            modifier            = Modifier.fillMaxWidth(),
-            verticalAlignment   = Alignment.CenterVertically,
+            modifier              = Modifier.fillMaxWidth(),
+            verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -229,8 +205,6 @@ private fun AppHideRow(
     }
 }
 
-// ─────────────────────── Search field ────────────────────────────────────[...]
-
 @Composable
 private fun AppSearchField(
     value: String,
@@ -239,7 +213,8 @@ private fun AppSearchField(
 ) {
     val shape       = RoundedCornerShape(20.dp)
     val borderColor = MaterialTheme.colorScheme.outline
-    val bgColor     = MaterialTheme.colorScheme.surface
+    // surfaceContainerHigh: modern M3 replacement for the removed 'surface' color token
+    val bgColor     = MaterialTheme.colorScheme.surfaceContainerHigh
 
     Box(
         modifier = modifier

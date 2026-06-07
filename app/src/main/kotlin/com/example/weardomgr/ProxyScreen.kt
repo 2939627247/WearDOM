@@ -2,11 +2,19 @@ package com.example.weardomgr
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
@@ -16,29 +24,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.wear.compose.material3.*
+import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.OutlinedButton
+import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.Text
 
-/**
- * HTTP Proxy configuration screen.
- *
- * DO API: [DevicePolicyManager.setRecommendedGlobalProxy] —
- * installs a system-wide HTTP proxy recommendation enforced across all networks.
- * Pass `null` to clear.
- */
 @Composable
 fun ProxyScreen(vm: DeviceOwnerViewModel) {
     val state     by vm.state.collectAsState()
     val listState  = rememberScalingLazyListState()
     val input      = state.proxyInput
 
-    ScreenScaffold(
-        scrollState = listState,
-        timeText = { TimeText() },
-    ) { contentPadding ->
+    ScreenScaffold(scrollState = listState) {
         ScalingLazyColumn(
             state               = listState,
             modifier            = Modifier.fillMaxSize(),
-            contentPadding      = contentPadding,
+            contentPadding      = PaddingValues(
+                top = 40.dp, bottom = 32.dp, start = 14.dp, end = 14.dp,
+            ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -52,7 +56,6 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                 )
             }
 
-            // ── Active proxy status ──
             item {
                 val (text, color) = if (state.activeProxy != null)
                     "✓ 当前: ${state.activeProxy}" to MaterialTheme.colorScheme.primary
@@ -139,8 +142,6 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
     }
 }
 
-// ─────────────────────── Input field helper ──────────────────────────────────
-
 @Composable
 private fun ProxyInputField(
     label: String,
@@ -152,8 +153,10 @@ private fun ProxyInputField(
     modifier: Modifier         = Modifier,
 ) {
     val shape       = RoundedCornerShape(10.dp)
+    // Use onSurfaceVariant for border; surfaceContainerHigh for background
+    // ('surface' is now a Modifier extension in Wear Material3, not a color token)
     val borderColor = MaterialTheme.colorScheme.outline
-    val bgColor     = MaterialTheme.colorScheme.surface
+    val bgColor     = MaterialTheme.colorScheme.surfaceContainerHigh
 
     Column(
         modifier            = modifier.fillMaxWidth(),

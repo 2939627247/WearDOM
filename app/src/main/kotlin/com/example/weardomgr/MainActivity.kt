@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
@@ -20,28 +21,26 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/** Root composable: single ViewModel instance shared across all screens. */
+/** Root composable: AppScaffold owns TimeText across navigation transitions. */
 @Composable
 private fun WearDOMgrApp() {
-    val vm: DeviceOwnerViewModel = viewModel()
+    val vm  = viewModel<DeviceOwnerViewModel>()
     val nav = rememberSwipeDismissableNavController()
 
-    SwipeDismissableNavHost(
-        navController = nav,
-        startDestination = Route.HOME,
-    ) {
-        composable(Route.HOME) {
-            MainScreen(
-                vm        = vm,
-                onProxy   = { nav.navigate(Route.PROXY) },
-                onAppHide = { nav.navigate(Route.APP_HIDE) },
-            )
-        }
-        composable(Route.PROXY) {
-            ProxyScreen(vm = vm)
-        }
-        composable(Route.APP_HIDE) {
-            AppHideScreen(vm = vm)
+    AppScaffold {
+        SwipeDismissableNavHost(
+            navController    = nav,
+            startDestination = Route.HOME,
+        ) {
+            composable(Route.HOME) {
+                MainScreen(
+                    vm        = vm,
+                    onProxy   = { nav.navigate(Route.PROXY) },
+                    onAppHide = { nav.navigate(Route.APP_HIDE) },
+                )
+            }
+            composable(Route.PROXY)    { ProxyScreen(vm = vm) }
+            composable(Route.APP_HIDE) { AppHideScreen(vm = vm) }
         }
     }
 }

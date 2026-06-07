@@ -1,7 +1,14 @@
 package com.example.weardomgr
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -12,12 +19,8 @@ import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.PositionIndicator
-import androidx.wear.compose.material3.Scaffold
+import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.TimeText
-import androidx.wear.compose.material3.Vignette
-import androidx.wear.compose.material3.VignettePosition
 
 @Composable
 fun MainScreen(
@@ -30,14 +33,11 @@ fun MainScreen(
 
     LaunchedEffect(Unit) { vm.refreshOwnerStatus() }
 
-    Scaffold(
-        timeText          = { TimeText() },
-        vignette          = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
-        positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
-    ) { _ ->
+    // ScreenScaffold: handles TimeText + ScrollIndicator automatically
+    ScreenScaffold(scrollState = listState) {
         ScalingLazyColumn(
             state               = listState,
-            modifier            = Modifier.fillMaxSize(),
+            modifier            = Modifier.fillMaxWidth(),
             contentPadding      = PaddingValues(
                 top = 40.dp, bottom = 32.dp, start = 12.dp, end = 12.dp,
             ),
@@ -57,7 +57,6 @@ fun MainScreen(
             item { DoStatusBadge(isOwner = state.isDeviceOwner) }
 
             if (state.isDeviceOwner) {
-
                 item {
                     FilledTonalButton(
                         onClick  = onProxy,
@@ -102,9 +101,7 @@ fun MainScreen(
                         }
                     }
                 }
-
             } else {
-
                 item {
                     Text(
                         text      = "需要 Device Owner 权限",
