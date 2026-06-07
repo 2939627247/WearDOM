@@ -34,6 +34,7 @@ jobs:
           distribution: 'temurin'
 
       # ── 3. Android SDK ────────────────────────────────────────────────────
+      # AGP 9.x default build-tools version is 36.0.0
       - name: Install Android SDK Platform 36
         run: |
           echo "y" | \
@@ -50,7 +51,7 @@ jobs:
 
       # ── 5. Build ─────────────────────────────────────────────────────────
       - name: Assemble Debug APK
-        run: ./gradlew :app:assembleDebug
+        run: gradle :app:assembleDebug
         env:
           GRADLE_OPTS: >-
             -Dorg.gradle.daemon=false
