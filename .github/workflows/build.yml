@@ -60,7 +60,7 @@ jobs:
 
       # ── 6. Upload artifact ────────────────────────────────────────────────
       - name: Upload Release APK
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: SmartThings-release-${{ github.run_number }}
           path: app/build/outputs/apk/release/*.apk
