@@ -70,7 +70,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
         timeText          = { TimeText() },
         vignette          = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
         positionIndicator = { PositionIndicator(scalingLazyListState = listState) },
-    ) {
+    ) { _ ->
         if (state.isLoadingApps) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -168,7 +168,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
     }
 }
 
-// ─────────────────────── AppHideRow ─────────────────────────────────────────
+// ─────────────────────── AppHideRow ─────────────────────────────────────[...]
 
 /**
  * Uses Button + Row instead of SplitToggleButton to avoid experimental-API
@@ -229,7 +229,7 @@ private fun AppHideRow(
     }
 }
 
-// ─────────────────────── Search field ───────────────────────────────────────
+// ─────────────────────── Search field ────────────────────────────────────[...]
 
 @Composable
 private fun AppSearchField(
