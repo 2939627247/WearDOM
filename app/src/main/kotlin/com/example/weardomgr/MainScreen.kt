@@ -1,5 +1,6 @@
 package com.example.weardomgr
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +38,7 @@ fun MainScreen(
     val listState    = rememberScalingLazyListState()
     val isAdmin      = state.isDeviceOwner
     val hiddenCount  = state.apps.count { it.isHidden }
+    val context      = LocalContext.current
 
     LaunchedEffect(Unit) { vm.refreshOwnerStatus() }
 
@@ -59,7 +62,6 @@ fun MainScreen(
                 )
             }
 
-            // ── HTTP Proxy ─────────────────────────────────────────────────
             item {
                 FeatureCard(
                     title       = "HTTP Proxy",
@@ -68,12 +70,14 @@ fun MainScreen(
                     isAdmin     = isAdmin,
                     onCardClick = onProxy,
                     onToggle    = {
-                        if (isAdmin) vm.toggleProxy() else vm.notifyNotAdmin()
+                        if (isAdmin) vm.toggleProxy()
+                        else Toast.makeText(
+                            context, "This app is not an admin.", Toast.LENGTH_SHORT
+                        ).show()
                     },
                 )
             }
 
-            // ── App Hide ───────────────────────────────────────────────────
             item {
                 FeatureCard(
                     title       = "App Hide",
@@ -86,43 +90,19 @@ fun MainScreen(
                     isAdmin     = isAdmin,
                     onCardClick = onAppHide,
                     onToggle    = {
-                        when {
-                            !isAdmin        -> vm.notifyNotAdmin()
+                        if (!isAdmin) Toast.makeText(
+                            context, "This app is not an admin.", Toast.LENGTH_SHORT
+                        ).show()
+                        else when {
                             hiddenCount > 0 -> vm.unhideAll()
                             else            -> onAppHide()
                         }
                     },
                 )
             }
-
-            if (state.message != null) {
-                item {
-                    Text(
-                        text      = state.message!!,
-                        style     = MaterialTheme.typography.labelSmall,
-                        color     = if (state.message!!.contains("not an admin"))
-                                        MaterialTheme.colorScheme.error
-                                    else
-                                        MaterialTheme.colorScheme.primary,
-                        textAlign = TextAlign.Center,
-                        modifier  = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
         }
     }
 }
-
-// ─────────────────────────── FeatureCard ─────────────────────────────────────
-//
-// FilledTonalButton as the card surface (standard Wear M3 touch target).
-// Inside: Row with text on the left, HorizontalDivider rotated as a separator,
-// and the M3 Switch on the right.
-//
-// Click isolation:
-//   • Switch area: Modifier.clickable { onToggle() } consumes the tap →
-//     the outer button's onClick does NOT also fire.
-//   • Everything else taps through to the button → onCardClick().
 
 @Composable
 private fun FeatureCard(
@@ -139,12 +119,10 @@ private fun FeatureCard(
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier          = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            modifier              = Modifier.fillMaxWidth(),
+            verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-
-            // ── Text ──────────────────────────────────────────────────────
             Column(
                 modifier            = Modifier
                     .weight(1f)
@@ -166,20 +144,14 @@ private fun FeatureCard(
                 )
             }
 
-            // ── Divider (visual only) ─────────────────────────────────────
             HorizontalDivider(
-                modifier  = Modifier
-                    .padding(horizontal = 8.dp)
-                    .weight(0.01f),   // zero visual width; acts as spacing sentinel
+                modifier  = Modifier.padding(horizontal = 8.dp).weight(0.01f),
                 thickness = 0.dp,
             )
 
-            // ── M3 Switch ─────────────────────────────────────────────────
-            // Modifier.clickable wraps only the Switch, consuming the tap
-            // so FilledTonalButton.onClick is not triggered simultaneously.
             Switch(
                 checked         = checked && isAdmin,
-                onCheckedChange = null,   // interaction handled by the clickable below
+                onCheckedChange = null,
                 enabled         = true,
                 modifier        = Modifier
                     .alpha(if (isAdmin) 1f else 0.45f)

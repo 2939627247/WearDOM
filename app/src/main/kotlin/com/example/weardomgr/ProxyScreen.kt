@@ -117,18 +117,6 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                 ) { Text("清除代理") }
             }
 
-            if (state.message != null) {
-                item {
-                    Text(
-                        text      = state.message!!,
-                        style     = MaterialTheme.typography.labelSmall,
-                        color     = MaterialTheme.colorScheme.primary,
-                        textAlign = TextAlign.Center,
-                        modifier  = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-
             item {
                 Text(
                     text      = "DO API: setRecommendedGlobalProxy()",

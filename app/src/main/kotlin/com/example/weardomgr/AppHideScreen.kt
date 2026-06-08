@@ -96,18 +96,6 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     )
                 }
 
-                if (state.message != null) {
-                    item {
-                        Text(
-                            text      = state.message!!,
-                            style     = MaterialTheme.typography.labelSmall,
-                            color     = MaterialTheme.colorScheme.primary,
-                            textAlign = TextAlign.Center,
-                            modifier  = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-
                 val userApps   = displayedApps.filter { !it.isSystemApp }
                 val systemApps = displayedApps.filter {  it.isSystemApp }
 
