@@ -96,8 +96,8 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     )
                 }
 
-                val userApps   = displayedApps.filter { !it.isSystemApp }
-                val systemApps = displayedApps.filter {  it.isSystemApp }
+                val userApps   = remember(displayedApps) { displayedApps.filter { !it.isSystemApp } }
+                val systemApps = remember(displayedApps) { displayedApps.filter {  it.isSystemApp } }
 
                 if (userApps.isNotEmpty()) {
                     item { ListHeader { Text("用户应用 (${userApps.size})") } }

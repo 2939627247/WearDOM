@@ -37,7 +37,9 @@ fun MainScreen(
     val state       by vm.state.collectAsState()
     val listState    = rememberScalingLazyListState()
     val isAdmin      = state.isDeviceOwner
-    val hiddenCount  = state.apps.count { it.isHidden }
+    val hiddenCount  = androidx.compose.runtime.remember(state.apps) {
+        state.apps.count { it.isHidden }
+    }
     val context      = LocalContext.current
 
     LaunchedEffect(Unit) { vm.refreshOwnerStatus() }

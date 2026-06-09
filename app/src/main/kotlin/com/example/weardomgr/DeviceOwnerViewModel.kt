@@ -2,6 +2,7 @@ package com.example.weardomgr
 
 import android.app.Application
 import android.app.admin.DevicePolicyManager
+import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.ProxyInfo
@@ -9,6 +10,7 @@ import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -57,10 +59,31 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
 
     private val admin = WearDeviceAdminReceiver.componentName(app)
 
+    // SharedPreferences — persists the last applied proxy across process restarts.
+    // (DPM has no getter for setRecommendedGlobalProxy, so we store it ourselves.)
+    private val prefs = app.getSharedPreferences("smartthings", Context.MODE_PRIVATE)
+
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
 
-    init { refreshOwnerStatus() }
+    init {
+        refreshOwnerStatus()
+        // Restore proxy that was applied in a previous session
+        val saved = restoreProxy()
+        if (saved != null) {
+            _state.update {
+                it.copy(
+                    activeProxy = saved,
+                    // Pre-fill input fields so user can see / edit last config
+                    proxyInput  = ProxyInput(
+                        host       = saved.host,
+                        port       = saved.port.toString(),
+                        exclusions = saved.exclusions.joinToString(","),
+                    ),
+                )
+            }
+        }
+    }
 
     // ──────────────────────── DO status ──────────────────────────────────────
 
@@ -87,49 +110,57 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
             dpm.setRecommendedGlobalProxy(
                 admin, ProxyInfo.buildDirectProxy(input.host, port, exclusions)
             )
-            _state.update {
-                it.copy(activeProxy = ProxyStatus(input.host, port, exclusions))
-            }
+            val status = ProxyStatus(input.host, port, exclusions)
+            saveProxy(status)                             // persist
+            _state.update { it.copy(activeProxy = status) }
         }
     }
 
     fun clearProxy() = viewModelScope.launch {
         safe {
             dpm.setRecommendedGlobalProxy(admin, null)
+            saveProxy(null)                               // clear persisted
             _state.update { it.copy(activeProxy = null) }
         }
     }
 
     // ──────────────────────── App Hiding ─────────────────────────────────────
 
-    fun loadApps() = viewModelScope.launch {
-        _state.update { it.copy(isLoadingApps = true) }
-        val pm      = getApplication<Application>().packageManager
-        val selfPkg = getApplication<Application>().packageName
+    // Cancels any in-flight load before starting a new one, preventing a slower
+    // earlier load from overwriting the results of a faster later one.
+    private var loadAppsJob: Job? = null
 
-        val apps = withContext(Dispatchers.IO) {
-            val rawList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0L))
-            } else {
-                @Suppress("DEPRECATION") pm.getInstalledApplications(0)
-            }
-            rawList
-                .filter { it.packageName != selfPkg }
-                .mapNotNull { info ->
-                    runCatching {
-                        AppItem(
-                            packageName = info.packageName,
-                            label       = pm.getApplicationLabel(info).toString(),
-                            isHidden    = runCatching {
-                                dpm.isApplicationHidden(admin, info.packageName)
-                            }.getOrDefault(false),
-                            isSystemApp = info.flags and ApplicationInfo.FLAG_SYSTEM != 0,
-                        )
-                    }.getOrNull()
+    fun loadApps() {
+        loadAppsJob?.cancel()
+        loadAppsJob = viewModelScope.launch {
+            _state.update { it.copy(isLoadingApps = true) }
+            val pm      = getApplication<Application>().packageManager
+            val selfPkg = getApplication<Application>().packageName
+
+            val apps = withContext(Dispatchers.IO) {
+                val rawList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0L))
+                } else {
+                    @Suppress("DEPRECATION") pm.getInstalledApplications(0)
                 }
-                .sortedWith(compareBy({ it.isSystemApp }, { it.label.lowercase() }))
+                rawList
+                    .filter { it.packageName != selfPkg }
+                    .mapNotNull { info ->
+                        runCatching {
+                            AppItem(
+                                packageName = info.packageName,
+                                label       = pm.getApplicationLabel(info).toString(),
+                                isHidden    = runCatching {
+                                    dpm.isApplicationHidden(admin, info.packageName)
+                                }.getOrDefault(false),
+                                isSystemApp = info.flags and ApplicationInfo.FLAG_SYSTEM != 0,
+                            )
+                        }.getOrNull()
+                    }
+                    .sortedWith(compareBy({ it.isSystemApp }, { it.label.lowercase() }))
+            }
+            _state.update { it.copy(apps = apps, isLoadingApps = false) }
         }
-        _state.update { it.copy(apps = apps, isLoadingApps = false) }
     }
 
     fun updateFilter(query: String) =
@@ -157,18 +188,54 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun unhideAll() = viewModelScope.launch {
-        safe {
-            val hidden = _state.value.apps.filter { it.isHidden }
-            hidden.forEach { app ->
-                dpm.setApplicationHidden(admin, app.packageName, false)
-            }
+        val hidden = _state.value.apps.filter { it.isHidden }
+        // Process each app independently: a failure on one must not prevent
+        // the others from being unhidden, and only successfully changed apps
+        // should be reflected in the UI state.
+        val unhiddenPkgs = withContext(Dispatchers.IO) {
+            hidden
+                .filter { app ->
+                    runCatching {
+                        dpm.setApplicationHidden(admin, app.packageName, false)
+                    }.getOrDefault(false)
+                }
+                .map { it.packageName }
+                .toHashSet()
+        }
+        if (unhiddenPkgs.isNotEmpty()) {
             _state.update { s ->
-                s.copy(apps = s.apps.map { it.copy(isHidden = false) })
+                s.copy(apps = s.apps.map {
+                    if (it.packageName in unhiddenPkgs) it.copy(isHidden = false) else it
+                })
             }
         }
     }
 
-    // ──────────────────────── Helper ─────────────────────────────────────────
+    // ──────────────────────── Persistence helpers ─────────────────────────────
+
+    private fun saveProxy(proxy: ProxyStatus?) {
+        prefs.edit().apply {
+            if (proxy != null) {
+                putString("proxy_host",       proxy.host)
+                putInt(   "proxy_port",       proxy.port)
+                putString("proxy_exclusions", proxy.exclusions.joinToString(","))
+            } else {
+                remove("proxy_host")
+                remove("proxy_port")
+                remove("proxy_exclusions")
+            }
+        }.apply()
+    }
+
+    private fun restoreProxy(): ProxyStatus? {
+        val host = prefs.getString("proxy_host", null) ?: return null
+        val port = prefs.getInt("proxy_port", -1).takeIf { it in 1..65535 } ?: return null
+        val exclusions = prefs.getString("proxy_exclusions", "")
+            ?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+        return ProxyStatus(host, port, exclusions)
+    }
+
+    // ──────────────────────── Internal helper ────────────────────────────────
 
     private suspend fun safe(block: suspend () -> Unit) = runCatching { block() }
 }
