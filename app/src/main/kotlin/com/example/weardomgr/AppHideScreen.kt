@@ -1,5 +1,7 @@
 package com.example.weardomgr
 
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +12,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -17,15 +21,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
@@ -36,6 +45,8 @@ import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun AppHideScreen(vm: DeviceOwnerViewModel) {
@@ -58,11 +69,15 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                 CircularProgressIndicator()
             }
         } else {
+            val userApps   = remember(displayedApps) { displayedApps.filter { !it.isSystemApp } }
+            val systemApps = remember(displayedApps) { displayedApps.filter {  it.isSystemApp } }
+
             TransformingLazyColumn(
-                state               = listState,
-                modifier            = Modifier.fillMaxSize(),
-                contentPadding      = PaddingValues(
-                    top = 40.dp, bottom = 32.dp, start = 10.dp, end = 10.dp,
+                state           = listState,
+                modifier        = Modifier.fillMaxSize(),
+                // Reduced horizontal padding → wider cards
+                contentPadding  = PaddingValues(
+                    top = 40.dp, bottom = 32.dp, start = 4.dp, end = 4.dp,
                 ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -95,9 +110,6 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                         onValueChange = { vm.updateFilter(it) },
                     )
                 }
-
-                val userApps   = remember(displayedApps) { displayedApps.filter { !it.isSystemApp } }
-                val systemApps = remember(displayedApps) { displayedApps.filter {  it.isSystemApp } }
 
                 if (userApps.isNotEmpty()) {
                     item { ListHeader { Text("用户应用 (${userApps.size})") } }
@@ -138,6 +150,8 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
     }
 }
 
+// ─────────────────────────── AppHideRow ──────────────────────────────────────
+
 @Composable
 private fun AppHideRow(
     app: AppItem,
@@ -158,8 +172,11 @@ private fun AppHideRow(
         Row(
             modifier              = Modifier.fillMaxWidth(),
             verticalAlignment     = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // Circular app icon — loaded asynchronously per item
+            AppIcon(packageName = app.packageName, size = 32)
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text     = app.label,
@@ -181,6 +198,7 @@ private fun AppHideRow(
                     },
                 )
             }
+
             Text(
                 text  = if (app.isHidden) "●" else "○",
                 style = MaterialTheme.typography.bodyMedium,
@@ -193,6 +211,51 @@ private fun AppHideRow(
     }
 }
 
+// ─────────────────────────── AppIcon ─────────────────────────────────────────
+//
+// Loads the app icon asynchronously on IO thread via produceState.
+// Shows a placeholder circle until the icon is ready.
+// Icon loading is tied to composition lifecycle: cancelled when the item
+// scrolls out of view, preventing off-screen work.
+
+@Composable
+private fun AppIcon(packageName: String, size: Int) {
+    val context = LocalContext.current
+    val sizeDp  = size.dp
+    val sizePx  = (size * 3)   // 3× for crisp rendering on high-density screens
+
+    val icon by produceState<Bitmap?>(null, packageName) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                context.packageManager
+                    .getApplicationIcon(packageName)
+                    .toBitmap(width = sizePx, height = sizePx)
+            }.getOrNull()
+        }
+    }
+
+    Box(
+        modifier        = Modifier.size(sizeDp).clip(CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (icon != null) {
+            Image(
+                bitmap             = icon!!.asImageBitmap(),
+                contentDescription = null,
+                modifier           = Modifier.fillMaxSize(),
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            )
+        }
+    }
+}
+
+// ─────────────────────────── AppSearchField ──────────────────────────────────
+
 @Composable
 private fun AppSearchField(
     value: String,
@@ -201,7 +264,6 @@ private fun AppSearchField(
 ) {
     val shape       = RoundedCornerShape(20.dp)
     val borderColor = MaterialTheme.colorScheme.outline
-    // surfaceContainerHigh: modern M3 replacement for the removed 'surface' color token
     val bgColor     = MaterialTheme.colorScheme.surfaceContainerHigh
 
     Box(

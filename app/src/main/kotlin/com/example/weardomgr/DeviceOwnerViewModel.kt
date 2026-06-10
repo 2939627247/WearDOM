@@ -17,6 +17,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -144,29 +147,44 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(isLoadingApps = true) }
             val pm      = getApplication<Application>().packageManager
             val selfPkg = getApplication<Application>().packageName
-            val apps = withContext(Dispatchers.IO) {
-                val rawList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Step 1 — fast: fetch raw list on IO thread
+            val rawList = withContext(Dispatchers.IO) {
+                val list = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0L))
                 } else {
                     @Suppress("DEPRECATION") pm.getInstalledApplications(0)
                 }
-                rawList
-                    .filter { it.packageName != selfPkg }
-                    .mapNotNull { info ->
-                        runCatching {
-                            AppItem(
-                                packageName = info.packageName,
-                                label       = pm.getApplicationLabel(info).toString(),
-                                isHidden    = runCatching {
-                                    dpm.isApplicationHidden(admin, info.packageName)
-                                }.getOrDefault(false),
-                                isSystemApp = info.flags and ApplicationInfo.FLAG_SYSTEM != 0,
-                            )
-                        }.getOrNull()
-                    }
-                    .sortedWith(compareBy({ it.isSystemApp }, { it.label.lowercase() }))
+                list.filter { it.packageName != selfPkg }
             }
-            _state.update { it.copy(apps = apps, isLoadingApps = false) }
+
+            // Step 2 — parallel: resolve labels + hidden state for all apps at once.
+            // Sequential resolution of 100+ apps can take several seconds on a watch;
+            // parallel cuts it to roughly one iteration's worth of time.
+            val apps = withContext(Dispatchers.IO) {
+                coroutineScope {
+                    rawList.map { info ->
+                        async {
+                            runCatching {
+                                AppItem(
+                                    packageName = info.packageName,
+                                    label       = info.loadLabel(pm).toString(),
+                                    isHidden    = runCatching {
+                                        dpm.isApplicationHidden(admin, info.packageName)
+                                    }.getOrDefault(false),
+                                    isSystemApp = info.flags and ApplicationInfo.FLAG_SYSTEM != 0,
+                                )
+                            }.getOrNull()
+                        }
+                    }.awaitAll()
+                }.filterNotNull()
+            }
+
+            _state.update {
+                it.copy(
+                    apps          = apps.sortedWith(compareBy({ it.isSystemApp }, { it.label.lowercase() })),
+                    isLoadingApps = false,
+                )
+            }
         }
     }
 
