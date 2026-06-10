@@ -21,8 +21,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
@@ -35,7 +35,7 @@ fun MainScreen(
     onAppHide: () -> Unit,
 ) {
     val state       by vm.state.collectAsState()
-    val listState    = rememberScalingLazyListState()
+    val listState    = rememberTransformingLazyColumnState()
     val isAdmin      = state.isDeviceOwner
     val hiddenCount  = androidx.compose.runtime.remember(state.apps) {
         state.apps.count { it.isHidden }
@@ -45,7 +45,7 @@ fun MainScreen(
     LaunchedEffect(Unit) { vm.refreshOwnerStatus() }
 
     ScreenScaffold(scrollState = listState) {
-        ScalingLazyColumn(
+        TransformingLazyColumn(
             state               = listState,
             modifier            = Modifier.fillMaxWidth(),
             contentPadding      = PaddingValues(

@@ -22,8 +22,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
-import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.OutlinedButton
@@ -33,11 +33,11 @@ import androidx.wear.compose.material3.Text
 @Composable
 fun ProxyScreen(vm: DeviceOwnerViewModel) {
     val state     by vm.state.collectAsState()
-    val listState  = rememberScalingLazyListState()
+    val listState  = rememberTransformingLazyColumnState()
     val input      = state.proxyInput
 
     ScreenScaffold(scrollState = listState) {
-        ScalingLazyColumn(
+        TransformingLazyColumn(
             state               = listState,
             modifier            = Modifier.fillMaxSize(),
             contentPadding      = PaddingValues(

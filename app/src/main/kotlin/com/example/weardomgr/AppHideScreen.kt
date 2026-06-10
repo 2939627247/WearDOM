@@ -26,9 +26,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
-import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
@@ -40,7 +40,7 @@ import androidx.wear.compose.material3.Text
 @Composable
 fun AppHideScreen(vm: DeviceOwnerViewModel) {
     val state     by vm.state.collectAsState()
-    val listState  = rememberScalingLazyListState()
+    val listState  = rememberTransformingLazyColumnState()
 
     LaunchedEffect(Unit) { vm.loadApps() }
 
@@ -58,7 +58,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                 CircularProgressIndicator()
             }
         } else {
-            ScalingLazyColumn(
+            TransformingLazyColumn(
                 state               = listState,
                 modifier            = Modifier.fillMaxSize(),
                 contentPadding      = PaddingValues(

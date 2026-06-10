@@ -7,6 +7,12 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.ProxyInfo
 import android.os.Build
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -14,9 +20,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+// DataStore delegate — must be at file level (one instance per process).
+// Replaces SharedPreferences: async, atomic, never blocks the main thread.
+private val Context.dataStore: DataStore<Preferences>
+    by preferencesDataStore(name = "smartthings")
 
 // ─────────────────────────────── Data layer ──────────────────────────────────
 
@@ -57,30 +70,28 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
     private val dpm: DevicePolicyManager =
         app.getSystemService(DevicePolicyManager::class.java)
 
-    private val admin = WearDeviceAdminReceiver.componentName(app)
-
-    // SharedPreferences — persists the last applied proxy across process restarts.
-    // (DPM has no getter for setRecommendedGlobalProxy, so we store it ourselves.)
-    private val prefs = app.getSharedPreferences("smartthings", Context.MODE_PRIVATE)
+    private val admin    = WearDeviceAdminReceiver.componentName(app)
+    private val dataStore = app.dataStore
 
     private val _state = MutableStateFlow(UiState())
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     init {
         refreshOwnerStatus()
-        // Restore proxy that was applied in a previous session
-        val saved = restoreProxy()
-        if (saved != null) {
-            _state.update {
-                it.copy(
-                    activeProxy = saved,
-                    // Pre-fill input fields so user can see / edit last config
-                    proxyInput  = ProxyInput(
-                        host       = saved.host,
-                        port       = saved.port.toString(),
-                        exclusions = saved.exclusions.joinToString(","),
-                    ),
-                )
+        // Restore persisted proxy: DataStore exposes data as a Flow, so
+        // we collect the first emission in a coroutine (non-blocking).
+        viewModelScope.launch {
+            restoreProxy()?.let { saved ->
+                _state.update {
+                    it.copy(
+                        activeProxy = saved,
+                        proxyInput  = ProxyInput(
+                            host       = saved.host,
+                            port       = saved.port.toString(),
+                            exclusions = saved.exclusions.joinToString(","),
+                        ),
+                    )
+                }
             }
         }
     }
@@ -103,7 +114,6 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
         if (input.host.isBlank()) return@launch
         val port = input.port.toIntOrNull()
         if (port == null || port !in 1..65535) return@launch
-
         safe {
             val exclusions = input.exclusions
                 .split(",").map { it.trim() }.filter { it.isNotEmpty() }
@@ -111,7 +121,7 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
                 admin, ProxyInfo.buildDirectProxy(input.host, port, exclusions)
             )
             val status = ProxyStatus(input.host, port, exclusions)
-            saveProxy(status)                             // persist
+            saveProxy(status)
             _state.update { it.copy(activeProxy = status) }
         }
     }
@@ -119,15 +129,13 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
     fun clearProxy() = viewModelScope.launch {
         safe {
             dpm.setRecommendedGlobalProxy(admin, null)
-            saveProxy(null)                               // clear persisted
+            saveProxy(null)
             _state.update { it.copy(activeProxy = null) }
         }
     }
 
     // ──────────────────────── App Hiding ─────────────────────────────────────
 
-    // Cancels any in-flight load before starting a new one, preventing a slower
-    // earlier load from overwriting the results of a faster later one.
     private var loadAppsJob: Job? = null
 
     fun loadApps() {
@@ -136,7 +144,6 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(isLoadingApps = true) }
             val pm      = getApplication<Application>().packageManager
             val selfPkg = getApplication<Application>().packageName
-
             val apps = withContext(Dispatchers.IO) {
                 val rawList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0L))
@@ -189,9 +196,6 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
 
     fun unhideAll() = viewModelScope.launch {
         val hidden = _state.value.apps.filter { it.isHidden }
-        // Process each app independently: a failure on one must not prevent
-        // the others from being unhidden, and only successfully changed apps
-        // should be reflected in the UI state.
         val unhiddenPkgs = withContext(Dispatchers.IO) {
             hidden
                 .filter { app ->
@@ -211,29 +215,37 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ──────────────────────── Persistence helpers ─────────────────────────────
+    // ──────────────────────── DataStore helpers ───────────────────────────────
 
-    private fun saveProxy(proxy: ProxyStatus?) {
-        prefs.edit().apply {
+    private object ProxyKeys {
+        val HOST       = stringPreferencesKey("proxy_host")
+        val PORT       = intPreferencesKey("proxy_port")
+        val EXCLUSIONS = stringPreferencesKey("proxy_exclusions")
+    }
+
+    private suspend fun saveProxy(proxy: ProxyStatus?) {
+        dataStore.edit { prefs ->
             if (proxy != null) {
-                putString("proxy_host",       proxy.host)
-                putInt(   "proxy_port",       proxy.port)
-                putString("proxy_exclusions", proxy.exclusions.joinToString(","))
+                prefs[ProxyKeys.HOST]       = proxy.host
+                prefs[ProxyKeys.PORT]       = proxy.port
+                prefs[ProxyKeys.EXCLUSIONS] = proxy.exclusions.joinToString(",")
             } else {
-                remove("proxy_host")
-                remove("proxy_port")
-                remove("proxy_exclusions")
+                prefs.remove(ProxyKeys.HOST)
+                prefs.remove(ProxyKeys.PORT)
+                prefs.remove(ProxyKeys.EXCLUSIONS)
             }
-        }.apply()
+        }
     }
 
-    private fun restoreProxy(): ProxyStatus? {
-        val host = prefs.getString("proxy_host", null) ?: return null
-        val port = prefs.getInt("proxy_port", -1).takeIf { it in 1..65535 } ?: return null
-        val exclusions = prefs.getString("proxy_exclusions", "")
-            ?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
-        return ProxyStatus(host, port, exclusions)
-    }
+    private suspend fun restoreProxy(): ProxyStatus? =
+        dataStore.data.map { prefs ->
+            val host = prefs[ProxyKeys.HOST] ?: return@map null
+            val port = prefs[ProxyKeys.PORT]?.takeIf { it in 1..65535 } ?: return@map null
+            val exclusions = prefs[ProxyKeys.EXCLUSIONS]
+                ?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+                ?: emptyList()
+            ProxyStatus(host, port, exclusions)
+        }.first()
 
     // ──────────────────────── Internal helper ────────────────────────────────
 
