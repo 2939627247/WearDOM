@@ -28,13 +28,17 @@ import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.OutlinedButton
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.rememberTransformationSpec
+import androidx.wear.compose.material3.transformedHeight
 
 @Composable
 fun ProxyScreen(vm: DeviceOwnerViewModel) {
     val state     by vm.state.collectAsState()
     val listState  = rememberTransformingLazyColumnState()
     val input      = state.proxyInput
+    val spec       = rememberTransformationSpec()
 
     ScreenScaffold(scrollState = listState) {
         TransformingLazyColumn(
@@ -52,7 +56,9 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     text      = "HTTP 代理设置",
                     style     = MaterialTheme.typography.titleSmall,
                     textAlign = TextAlign.Center,
-                    modifier  = Modifier.fillMaxWidth(),
+                    modifier  = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
                 )
             }
 
@@ -66,7 +72,9 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     style     = MaterialTheme.typography.bodySmall,
                     color     = color,
                     textAlign = TextAlign.Center,
-                    modifier  = Modifier.fillMaxWidth(),
+                    modifier  = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
                 )
             }
 
@@ -78,6 +86,9 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     keyboardType  = KeyboardType.Uri,
                     imeAction     = ImeAction.Next,
                     onValueChange = { vm.updateProxyInput(input.copy(host = it)) },
+                    modifier      = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
                 )
             }
 
@@ -89,6 +100,9 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     keyboardType  = KeyboardType.Number,
                     imeAction     = ImeAction.Next,
                     onValueChange = { vm.updateProxyInput(input.copy(port = it)) },
+                    modifier      = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
                 )
             }
 
@@ -100,20 +114,29 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     keyboardType  = KeyboardType.Text,
                     imeAction     = ImeAction.Done,
                     onValueChange = { vm.updateProxyInput(input.copy(exclusions = it)) },
+                    modifier      = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
                 )
             }
 
             item {
                 Button(
-                    onClick  = { vm.applyProxy() },
-                    modifier = Modifier.fillMaxWidth(),
+                    onClick        = { vm.applyProxy() },
+                    modifier       = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
+                    transformation = SurfaceTransformation(spec),
                 ) { Text("应用代理") }
             }
 
             item {
                 OutlinedButton(
-                    onClick  = { vm.clearProxy() },
-                    modifier = Modifier.fillMaxWidth(),
+                    onClick        = { vm.clearProxy() },
+                    modifier       = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
+                    transformation = SurfaceTransformation(spec),
                 ) { Text("清除代理") }
             }
 
@@ -123,7 +146,10 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     style     = MaterialTheme.typography.labelSmall,
                     color     = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    modifier  = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    modifier  = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec)
+                        .padding(top = 4.dp),
                 )
             }
         }
@@ -137,17 +163,15 @@ private fun ProxyInputField(
     hint: String,
     onValueChange: (String) -> Unit,
     keyboardType: KeyboardType = KeyboardType.Text,
-    imeAction: ImeAction       = ImeAction.Next,
-    modifier: Modifier         = Modifier,
+    imeAction: ImeAction        = ImeAction.Next,
+    modifier: Modifier          = Modifier,
 ) {
     val shape       = RoundedCornerShape(10.dp)
-    // Use onSurfaceVariant for border; surfaceContainerHigh for background
-    // ('surface' is now a Modifier extension in Wear Material3, not a color token)
     val borderColor = MaterialTheme.colorScheme.outline
     val bgColor     = MaterialTheme.colorScheme.surfaceContainerHigh
 
     Column(
-        modifier            = modifier.fillMaxWidth(),
+        modifier            = modifier,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(

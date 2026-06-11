@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -26,7 +27,10 @@ import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.rememberTransformationSpec
+import androidx.wear.compose.material3.transformedHeight
 
 @Composable
 fun MainScreen(
@@ -37,10 +41,9 @@ fun MainScreen(
     val state       by vm.state.collectAsState()
     val listState    = rememberTransformingLazyColumnState()
     val isAdmin      = state.isDeviceOwner
-    val hiddenCount  = androidx.compose.runtime.remember(state.apps) {
-        state.apps.count { it.isHidden }
-    }
+    val hiddenCount  = remember(state.apps) { state.apps.count { it.isHidden } }
     val context      = LocalContext.current
+    val spec         = rememberTransformationSpec()
 
     LaunchedEffect(Unit) { vm.refreshOwnerStatus() }
 
@@ -60,7 +63,9 @@ fun MainScreen(
                     text      = "SmartThings",
                     style     = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
-                    modifier  = Modifier.fillMaxWidth(),
+                    modifier  = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
                 )
             }
 
@@ -77,6 +82,10 @@ fun MainScreen(
                             context, "This app is not an admin.", Toast.LENGTH_SHORT
                         ).show()
                     },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
+                    transformation = SurfaceTransformation(spec),
                 )
             }
 
@@ -100,6 +109,10 @@ fun MainScreen(
                             else            -> onAppHide()
                         }
                     },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
+                    transformation = SurfaceTransformation(spec),
                 )
             }
         }
@@ -115,10 +128,12 @@ private fun FeatureCard(
     onCardClick: () -> Unit,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
+    transformation: SurfaceTransformation? = null,
 ) {
     FilledTonalButton(
-        onClick  = onCardClick,
-        modifier = modifier.fillMaxWidth(),
+        onClick        = onCardClick,
+        modifier       = modifier,
+        transformation = transformation,
     ) {
         Row(
             modifier              = Modifier.fillMaxWidth(),

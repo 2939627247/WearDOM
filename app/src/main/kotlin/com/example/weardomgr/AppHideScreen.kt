@@ -44,7 +44,10 @@ import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.rememberTransformationSpec
+import androidx.wear.compose.material3.transformedHeight
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -52,6 +55,7 @@ import kotlinx.coroutines.withContext
 fun AppHideScreen(vm: DeviceOwnerViewModel) {
     val state     by vm.state.collectAsState()
     val listState  = rememberTransformingLazyColumnState()
+    val spec       = rememberTransformationSpec()
 
     LaunchedEffect(Unit) { vm.loadApps() }
 
@@ -73,10 +77,9 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
             val systemApps = remember(displayedApps) { displayedApps.filter {  it.isSystemApp } }
 
             TransformingLazyColumn(
-                state           = listState,
-                modifier        = Modifier.fillMaxSize(),
-                // Reduced horizontal padding → wider cards
-                contentPadding  = PaddingValues(
+                state               = listState,
+                modifier            = Modifier.fillMaxSize(),
+                contentPadding      = PaddingValues(
                     top = 40.dp, bottom = 32.dp, start = 4.dp, end = 4.dp,
                 ),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -88,7 +91,9 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                         text      = "应用隐藏管理",
                         style     = MaterialTheme.typography.titleSmall,
                         textAlign = TextAlign.Center,
-                        modifier  = Modifier.fillMaxWidth(),
+                        modifier  = Modifier
+                            .fillMaxWidth()
+                            .transformedHeight(this, spec),
                     )
                 }
 
@@ -101,6 +106,9 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                         color = if (hidden > 0) MaterialTheme.colorScheme.error
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
+                        modifier  = Modifier
+                            .fillMaxWidth()
+                            .transformedHeight(this, spec),
                     )
                 }
 
@@ -108,20 +116,51 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     AppSearchField(
                         value         = state.appsFilter,
                         onValueChange = { vm.updateFilter(it) },
+                        modifier      = Modifier
+                            .fillMaxWidth()
+                            .transformedHeight(this, spec),
                     )
                 }
 
                 if (userApps.isNotEmpty()) {
-                    item { ListHeader { Text("用户应用 (${userApps.size})") } }
+                    item {
+                        ListHeader(
+                            modifier       = Modifier
+                                .fillMaxWidth()
+                                .transformedHeight(this, spec),
+                            transformation = SurfaceTransformation(spec),
+                        ) { Text("用户应用 (${userApps.size})") }
+                    }
                     items(userApps, key = { it.packageName }) { app ->
-                        AppHideRow(app = app, onToggle = { vm.toggleHidden(app.packageName) })
+                        AppHideRow(
+                            app      = app,
+                            onToggle = { vm.toggleHidden(app.packageName) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .transformedHeight(this, spec),
+                            transformation = SurfaceTransformation(spec),
+                        )
                     }
                 }
 
                 if (systemApps.isNotEmpty()) {
-                    item { ListHeader { Text("系统应用 (${systemApps.size})") } }
+                    item {
+                        ListHeader(
+                            modifier       = Modifier
+                                .fillMaxWidth()
+                                .transformedHeight(this, spec),
+                            transformation = SurfaceTransformation(spec),
+                        ) { Text("系统应用 (${systemApps.size})") }
+                    }
                     items(systemApps, key = { it.packageName }) { app ->
-                        AppHideRow(app = app, onToggle = { vm.toggleHidden(app.packageName) })
+                        AppHideRow(
+                            app      = app,
+                            onToggle = { vm.toggleHidden(app.packageName) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .transformedHeight(this, spec),
+                            transformation = SurfaceTransformation(spec),
+                        )
                     }
                 }
 
@@ -131,7 +170,9 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                             text      = "无匹配应用",
                             style     = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center,
-                            modifier  = Modifier.fillMaxWidth(),
+                            modifier  = Modifier
+                                .fillMaxWidth()
+                                .transformedHeight(this, spec),
                         )
                     }
                 }
@@ -142,7 +183,10 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                         style     = MaterialTheme.typography.labelSmall,
                         color     = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
-                        modifier  = Modifier.fillMaxWidth().padding(top = 6.dp),
+                        modifier  = Modifier
+                            .fillMaxWidth()
+                            .transformedHeight(this, spec)
+                            .padding(top = 6.dp),
                     )
                 }
             }
@@ -157,11 +201,13 @@ private fun AppHideRow(
     app: AppItem,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
+    transformation: SurfaceTransformation? = null,
 ) {
     Button(
-        onClick  = onToggle,
-        modifier = modifier.fillMaxWidth(),
-        colors   = if (app.isHidden)
+        onClick        = onToggle,
+        modifier       = modifier,
+        transformation = transformation,
+        colors         = if (app.isHidden)
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer,
                 contentColor   = MaterialTheme.colorScheme.onErrorContainer,
@@ -174,7 +220,6 @@ private fun AppHideRow(
             verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Circular app icon — loaded asynchronously per item
             AppIcon(packageName = app.packageName, size = 32)
 
             Column(modifier = Modifier.weight(1f)) {
@@ -212,17 +257,12 @@ private fun AppHideRow(
 }
 
 // ─────────────────────────── AppIcon ─────────────────────────────────────────
-//
-// Loads the app icon asynchronously on IO thread via produceState.
-// Shows a placeholder circle until the icon is ready.
-// Icon loading is tied to composition lifecycle: cancelled when the item
-// scrolls out of view, preventing off-screen work.
 
 @Composable
 private fun AppIcon(packageName: String, size: Int) {
     val context = LocalContext.current
     val sizeDp  = size.dp
-    val sizePx  = (size * 3)   // 3× for crisp rendering on high-density screens
+    val sizePx  = size * 3
 
     val icon by produceState<Bitmap?>(null, packageName) {
         value = withContext(Dispatchers.IO) {
@@ -235,7 +275,7 @@ private fun AppIcon(packageName: String, size: Int) {
     }
 
     Box(
-        modifier        = Modifier.size(sizeDp).clip(CircleShape),
+        modifier         = Modifier.size(sizeDp).clip(CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         if (icon != null) {
@@ -268,7 +308,6 @@ private fun AppSearchField(
 
     Box(
         modifier = modifier
-            .fillMaxWidth()
             .background(color = bgColor, shape = shape)
             .border(width = 1.dp, color = borderColor, shape = shape)
             .padding(horizontal = 12.dp, vertical = 6.dp),
