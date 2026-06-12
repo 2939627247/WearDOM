@@ -4,7 +4,6 @@ import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,7 +26,6 @@ import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
-import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
@@ -43,17 +41,14 @@ fun MainScreen(
     val isAdmin      = state.isDeviceOwner
     val hiddenCount  = remember(state.apps) { state.apps.count { it.isHidden } }
     val context      = LocalContext.current
-    val spec         = rememberTransformationSpec()
 
     LaunchedEffect(Unit) { vm.refreshOwnerStatus() }
 
-    ScreenScaffold(scrollState = listState) {
+    ScreenScaffold(scrollState = listState) { contentPadding ->
         TransformingLazyColumn(
             state               = listState,
             modifier            = Modifier.fillMaxWidth(),
-            contentPadding      = PaddingValues(
-                top = 40.dp, bottom = 32.dp, start = 8.dp, end = 8.dp,
-            ),
+            contentPadding      = contentPadding,
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -64,8 +59,7 @@ fun MainScreen(
                     style     = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
                     modifier  = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
+                        .fillMaxWidth(),
                 )
             }
 
@@ -83,9 +77,7 @@ fun MainScreen(
                         ).show()
                     },
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
-                    transformation = SurfaceTransformation(spec),
+                        .fillMaxWidth(),
                 )
             }
 
@@ -110,9 +102,7 @@ fun MainScreen(
                         }
                     },
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
-                    transformation = SurfaceTransformation(spec),
+                        .fillMaxWidth(),
                 )
             }
         }

@@ -28,16 +28,13 @@ import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.OutlinedButton
 import androidx.wear.compose.material3.ScreenScaffold
-import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.rememberTransformationSpec
 
 @Composable
 fun ProxyScreen(vm: DeviceOwnerViewModel) {
     val state     by vm.state.collectAsState()
     val listState  = rememberTransformingLazyColumnState()
     val input      = state.proxyInput
-    val spec       = rememberTransformationSpec()
 
     ScreenScaffold(scrollState = listState) { contentPadding ->
         TransformingLazyColumn(
@@ -54,8 +51,7 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     style     = MaterialTheme.typography.titleSmall,
                     textAlign = TextAlign.Center,
                     modifier  = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
+                        .fillMaxWidth(),
                 )
             }
 
@@ -70,8 +66,7 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     color     = color,
                     textAlign = TextAlign.Center,
                     modifier  = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
+                        .fillMaxWidth(),
                 )
             }
 
@@ -84,8 +79,7 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     imeAction     = ImeAction.Next,
                     onValueChange = { vm.updateProxyInput(input.copy(host = it)) },
                     modifier      = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
+                        .fillMaxWidth(),
                 )
             }
 
@@ -98,8 +92,7 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     imeAction     = ImeAction.Next,
                     onValueChange = { vm.updateProxyInput(input.copy(port = it)) },
                     modifier      = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
+                        .fillMaxWidth(),
                 )
             }
 
@@ -112,8 +105,7 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     imeAction     = ImeAction.Done,
                     onValueChange = { vm.updateProxyInput(input.copy(exclusions = it)) },
                     modifier      = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
+                        .fillMaxWidth(),
                 )
             }
 
@@ -121,9 +113,7 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                 Button(
                     onClick        = { vm.applyProxy() },
                     modifier       = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
-                    transformation = SurfaceTransformation(spec),
+                        .fillMaxWidth(),
                 ) { Text("应用代理") }
             }
 
@@ -131,9 +121,7 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                 OutlinedButton(
                     onClick        = { vm.clearProxy() },
                     modifier       = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
-                    transformation = SurfaceTransformation(spec),
+                        .fillMaxWidth(),
                 ) { Text("清除代理") }
             }
 
@@ -145,8 +133,7 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     textAlign = TextAlign.Center,
                     modifier  = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp)
-                        .transformedHeight(this, spec),
+                        .padding(top = 4.dp),
                 )
             }
         }
