@@ -27,8 +27,6 @@ import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.lazy.rememberTransformationSpec
-import androidx.wear.compose.material3.lazy.transformedHeight
 
 @Composable
 fun MainScreen(
@@ -118,7 +116,6 @@ private fun FeatureCard(
     onCardClick: () -> Unit,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
-    transformation: SurfaceTransformation? = null,
 ) {
     FilledTonalButton(
         onClick        = onCardClick,
