@@ -5,7 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -31,7 +31,6 @@ import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.rememberTransformationSpec
-import androidx.wear.compose.material3.transformedHeight
 
 @Composable
 fun ProxyScreen(vm: DeviceOwnerViewModel) {
@@ -40,13 +39,11 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
     val input      = state.proxyInput
     val spec       = rememberTransformationSpec()
 
-    ScreenScaffold(scrollState = listState) {
+    ScreenScaffold(scrollState = listState) { contentPadding ->
         TransformingLazyColumn(
             state               = listState,
+            contentPadding      = contentPadding,
             modifier            = Modifier.fillMaxSize(),
-            contentPadding      = PaddingValues(
-                top = 40.dp, bottom = 32.dp, start = 14.dp, end = 14.dp,
-            ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -148,8 +145,8 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     textAlign = TextAlign.Center,
                     modifier  = Modifier
                         .fillMaxWidth()
-                        .transformedHeight(this, spec)
-                        .padding(top = 4.dp),
+                        .padding(top = 4.dp)
+                        .transformedHeight(this, spec),
                 )
             }
         }
@@ -163,8 +160,8 @@ private fun ProxyInputField(
     hint: String,
     onValueChange: (String) -> Unit,
     keyboardType: KeyboardType = KeyboardType.Text,
-    imeAction: ImeAction        = ImeAction.Next,
-    modifier: Modifier          = Modifier,
+    imeAction: ImeAction       = ImeAction.Next,
+    modifier: Modifier         = Modifier,
 ) {
     val shape       = RoundedCornerShape(10.dp)
     val borderColor = MaterialTheme.colorScheme.outline
