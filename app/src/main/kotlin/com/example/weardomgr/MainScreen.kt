@@ -29,10 +29,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.ColumnItemType
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.rememberResponsiveColumnPadding
+import androidx.wear.compose.material3.rememberTransformationSpec
 
 @Composable
 fun MainScreen(
@@ -45,10 +49,17 @@ fun MainScreen(
     val isAdmin      = state.isDeviceOwner
     val hiddenCount  = remember(state.apps) { state.apps.count { it.isHidden } }
     val context      = LocalContext.current
+    val spec         = rememberTransformationSpec()
 
     LaunchedEffect(Unit) { vm.refreshOwnerStatus() }
 
-    ScreenScaffold(scrollState = listState) { contentPadding ->
+    ScreenScaffold(
+        scrollState    = listState,
+        contentPadding = rememberResponsiveColumnPadding(
+            first = ColumnItemType.Text,
+            last  = ColumnItemType.Button,
+        ),
+    ) { contentPadding ->
         TransformingLazyColumn(
             state               = listState,
             contentPadding      = contentPadding,
@@ -62,7 +73,9 @@ fun MainScreen(
                     text      = "SmartThings",
                     style     = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
-                    modifier  = Modifier.fillMaxWidth(),
+                    modifier  = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
                 )
             }
 
@@ -77,6 +90,10 @@ fun MainScreen(
                         if (isAdmin) vm.toggleProxy()
                         else Toast.makeText(context, "This app is not an admin.", Toast.LENGTH_SHORT).show()
                     },
+                    modifier    = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
+                    spec        = spec,
                 )
             }
 
@@ -98,6 +115,10 @@ fun MainScreen(
                             else            -> onAppHide()
                         }
                     },
+                    modifier    = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
+                    spec        = spec,
                 )
             }
         }
@@ -113,14 +134,13 @@ private fun FeatureCard(
     onCardClick: () -> Unit,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
+    spec: androidx.wear.compose.material3.TransformationSpec? = null,
 ) {
-    // LocalRippleConfiguration = null disables the ripple on the button
     CompositionLocalProvider(LocalRippleConfiguration provides null) {
         FilledTonalButton(
-            onClick  = onCardClick,
-            modifier = modifier
-                .fillMaxWidth()
-                .heightIn(min = 68.dp),  // taller card for better proportion
+            onClick        = onCardClick,
+            modifier       = modifier.heightIn(min = 68.dp),
+            transformation = spec?.let { SurfaceTransformation(it) },
         ) {
             Row(
                 modifier              = Modifier.fillMaxWidth(),
@@ -149,7 +169,6 @@ private fun FeatureCard(
                     )
                 }
 
-                // Visible vertical separator indicating a sub-menu exists
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 8.dp)
@@ -164,7 +183,7 @@ private fun FeatureCard(
                     modifier        = Modifier
                         .alpha(if (isAdmin) 1f else 0.45f)
                         .clickable(
-                            indication        = null,   // no ripple on Switch tap
+                            indication        = null,
                             interactionSource = remember { MutableInteractionSource() },
                         ) { onToggle() },
                 )
