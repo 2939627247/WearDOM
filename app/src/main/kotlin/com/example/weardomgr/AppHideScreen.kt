@@ -176,7 +176,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
 
 @Composable
 private fun AppHideRow(
-    app: AppItem
+    app: AppItem,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {

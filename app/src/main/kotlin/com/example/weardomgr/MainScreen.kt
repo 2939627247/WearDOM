@@ -118,9 +118,8 @@ private fun FeatureCard(
     modifier: Modifier = Modifier,
 ) {
     FilledTonalButton(
-        onClick        = onCardClick,
-        modifier       = modifier,
-        transformation = transformation,
+        onClick  = onCardClick,
+        modifier = modifier,
     ) {
         Row(
             modifier              = Modifier.fillMaxWidth(),
