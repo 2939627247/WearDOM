@@ -1,13 +1,15 @@
 package com.example.weardomgr
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -147,9 +149,13 @@ private fun FeatureCard(
                 )
             }
 
-            HorizontalDivider(
-                modifier  = Modifier.padding(horizontal = 8.dp).weight(0.01f),
-                thickness = 0.dp,
+            // Visible vertical divider — indicates the card has a sub-menu.
+            // HorizontalDivider was wrong here (horizontal line, thickness=0dp = invisible).
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .size(width = 1.dp, height = 28.dp)
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
             )
 
             Switch(

@@ -28,10 +28,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
@@ -62,15 +64,22 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
         }
     }
 
+    // FIX: remember called unconditionally, outside if/else — Compose
+    // requires composable functions to be called on every recomposition
+    // regardless of conditions to keep the slot table consistent.
+    val userApps   = remember(displayedApps) { displayedApps.filter { !it.isSystemApp } }
+    val systemApps = remember(displayedApps) { displayedApps.filter {  it.isSystemApp } }
+
+    // FIX: memoize counts that are referenced in item bodies
+    val totalCount  = remember(state.apps) { state.apps.size }
+    val hiddenCount = remember(state.apps) { state.apps.count { it.isHidden } }
+
     ScreenScaffold(scrollState = listState) { contentPadding ->
         if (state.isLoadingApps) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else {
-            val userApps   = remember(displayedApps) { displayedApps.filter { !it.isSystemApp } }
-            val systemApps = remember(displayedApps) { displayedApps.filter {  it.isSystemApp } }
-
             TransformingLazyColumn(
                 state               = listState,
                 contentPadding      = contentPadding,
@@ -84,22 +93,18 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                         text      = "应用隐藏管理",
                         style     = MaterialTheme.typography.titleSmall,
                         textAlign = TextAlign.Center,
-                        modifier  = Modifier
-                            .fillMaxWidth(),
+                        modifier  = Modifier.fillMaxWidth(),
                     )
                 }
 
                 item {
-                    val total  = state.apps.size
-                    val hidden = state.apps.count { it.isHidden }
                     Text(
-                        text  = "共 $total 个 · 已隐藏 $hidden 个",
+                        text  = "共 $totalCount 个 · 已隐藏 $hiddenCount 个",
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (hidden > 0) MaterialTheme.colorScheme.error
+                        color = if (hiddenCount > 0) MaterialTheme.colorScheme.error
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
-                        modifier  = Modifier
-                            .fillMaxWidth(),
+                        modifier  = Modifier.fillMaxWidth(),
                     )
                 }
 
@@ -107,41 +112,36 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     AppSearchField(
                         value         = state.appsFilter,
                         onValueChange = { vm.updateFilter(it) },
-                        modifier      = Modifier
-                            .fillMaxWidth(),
+                        modifier      = Modifier.fillMaxWidth(),
                     )
                 }
 
                 if (userApps.isNotEmpty()) {
                     item {
-                        ListHeader(
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                        ) { Text("用户应用 (${userApps.size})") }
+                        ListHeader(modifier = Modifier.fillMaxWidth()) {
+                            Text("用户应用 (${userApps.size})")
+                        }
                     }
                     items(userApps, key = { it.packageName }) { app ->
                         AppHideRow(
                             app      = app,
                             onToggle = { vm.toggleHidden(app.packageName) },
-                            modifier = Modifier
-                                .fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }
 
                 if (systemApps.isNotEmpty()) {
                     item {
-                        ListHeader(
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                        ) { Text("系统应用 (${systemApps.size})") }
+                        ListHeader(modifier = Modifier.fillMaxWidth()) {
+                            Text("系统应用 (${systemApps.size})")
+                        }
                     }
                     items(systemApps, key = { it.packageName }) { app ->
                         AppHideRow(
                             app      = app,
                             onToggle = { vm.toggleHidden(app.packageName) },
-                            modifier = Modifier
-                                .fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }
@@ -152,8 +152,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                             text      = "无匹配应用",
                             style     = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center,
-                            modifier  = Modifier
-                                .fillMaxWidth(),
+                            modifier  = Modifier.fillMaxWidth(),
                         )
                     }
                 }
@@ -174,6 +173,8 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
     }
 }
 
+// ─────────────────────────── AppHideRow ──────────────────────────────────────
+
 @Composable
 private fun AppHideRow(
     app: AppItem,
@@ -181,9 +182,9 @@ private fun AppHideRow(
     modifier: Modifier = Modifier,
 ) {
     Button(
-        onClick        = onToggle,
-        modifier       = modifier,
-        colors         = if (app.isHidden)
+        onClick  = onToggle,
+        modifier = modifier,
+        colors   = if (app.isHidden)
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer,
                 contentColor   = MaterialTheme.colorScheme.onErrorContainer,
@@ -196,7 +197,7 @@ private fun AppHideRow(
             verticalAlignment     = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            AppIcon(packageName = app.packageName, size = 32)
+            AppIcon(packageName = app.packageName, size = 32.dp)
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -232,11 +233,14 @@ private fun AppHideRow(
     }
 }
 
+// ─────────────────────────── AppIcon ─────────────────────────────────────────
+
 @Composable
-private fun AppIcon(packageName: String, size: Int) {
+private fun AppIcon(packageName: String, size: Dp) {
     val context = LocalContext.current
-    val sizeDp  = size.dp
-    val sizePx  = size * 3
+    // FIX: derive pixel size from actual screen density instead of
+    // hardcoding size * 3, which over/under-samples on non-3x screens.
+    val sizePx = with(LocalDensity.current) { size.roundToPx() }
 
     val icon by produceState<Bitmap?>(null, packageName) {
         value = withContext(Dispatchers.IO) {
@@ -249,7 +253,7 @@ private fun AppIcon(packageName: String, size: Int) {
     }
 
     Box(
-        modifier         = Modifier.size(sizeDp).clip(CircleShape),
+        modifier         = Modifier.size(size).clip(CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         if (icon != null) {
@@ -267,6 +271,8 @@ private fun AppIcon(packageName: String, size: Int) {
         }
     }
 }
+
+// ─────────────────────────── AppSearchField ──────────────────────────────────
 
 @Composable
 private fun AppSearchField(
