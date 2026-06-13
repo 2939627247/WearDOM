@@ -156,18 +156,6 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                         )
                     }
                 }
-
-                item {
-                    Text(
-                        text      = "DO API: setApplicationHidden()\nisApplicationHidden()",
-                        style     = MaterialTheme.typography.labelSmall,
-                        color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier  = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 6.dp),
-                    )
-                }
             }
         }
     }

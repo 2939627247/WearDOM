@@ -124,18 +124,6 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                         .fillMaxWidth(),
                 ) { Text("清除代理") }
             }
-
-            item {
-                Text(
-                    text      = "DO API: setRecommendedGlobalProxy()",
-                    style     = MaterialTheme.typography.labelSmall,
-                    color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier  = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                )
-            }
         }
     }
 }

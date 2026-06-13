@@ -3,15 +3,19 @@ package com.example.weardomgr
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,10 +51,10 @@ fun MainScreen(
     ScreenScaffold(scrollState = listState) { contentPadding ->
         TransformingLazyColumn(
             state               = listState,
-            modifier            = Modifier.fillMaxWidth(),
             contentPadding      = contentPadding,
+            modifier            = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
 
             item {
@@ -58,8 +62,7 @@ fun MainScreen(
                     text      = "SmartThings",
                     style     = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
-                    modifier  = Modifier
-                        .fillMaxWidth(),
+                    modifier  = Modifier.fillMaxWidth(),
                 )
             }
 
@@ -72,12 +75,8 @@ fun MainScreen(
                     onCardClick = onProxy,
                     onToggle    = {
                         if (isAdmin) vm.toggleProxy()
-                        else Toast.makeText(
-                            context, "This app is not an admin.", Toast.LENGTH_SHORT
-                        ).show()
+                        else Toast.makeText(context, "This app is not an admin.", Toast.LENGTH_SHORT).show()
                     },
-                    modifier = Modifier
-                        .fillMaxWidth(),
                 )
             }
 
@@ -93,16 +92,12 @@ fun MainScreen(
                     isAdmin     = isAdmin,
                     onCardClick = onAppHide,
                     onToggle    = {
-                        if (!isAdmin) Toast.makeText(
-                            context, "This app is not an admin.", Toast.LENGTH_SHORT
-                        ).show()
+                        if (!isAdmin) Toast.makeText(context, "This app is not an admin.", Toast.LENGTH_SHORT).show()
                         else when {
                             hiddenCount > 0 -> vm.unhideAll()
                             else            -> onAppHide()
                         }
                     },
-                    modifier = Modifier
-                        .fillMaxWidth(),
                 )
             }
         }
@@ -119,53 +114,61 @@ private fun FeatureCard(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    FilledTonalButton(
-        onClick  = onCardClick,
-        modifier = modifier,
-    ) {
-        Row(
-            modifier              = Modifier.fillMaxWidth(),
-            verticalAlignment     = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+    // LocalRippleConfiguration = null disables the ripple on the button
+    CompositionLocalProvider(LocalRippleConfiguration provides null) {
+        FilledTonalButton(
+            onClick  = onCardClick,
+            modifier = modifier
+                .fillMaxWidth()
+                .heightIn(min = 68.dp),  // taller card for better proportion
         ) {
-            Column(
-                modifier            = Modifier
-                    .weight(1f)
-                    .alpha(if (isAdmin) 1f else 0.45f),
-                verticalArrangement = Arrangement.spacedBy(1.dp),
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(
-                    text     = title,
-                    style    = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                Column(
+                    modifier            = Modifier
+                        .weight(1f)
+                        .padding(vertical = 4.dp)
+                        .alpha(if (isAdmin) 1f else 0.45f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(
+                        text     = title,
+                        style    = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text     = subtitle,
+                        style    = MaterialTheme.typography.labelSmall,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                // Visible vertical separator indicating a sub-menu exists
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .size(width = 1.dp, height = 28.dp)
+                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
                 )
-                Text(
-                    text     = subtitle,
-                    style    = MaterialTheme.typography.labelSmall,
-                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+
+                Switch(
+                    checked         = checked && isAdmin,
+                    onCheckedChange = null,
+                    enabled         = true,
+                    modifier        = Modifier
+                        .alpha(if (isAdmin) 1f else 0.45f)
+                        .clickable(
+                            indication        = null,   // no ripple on Switch tap
+                            interactionSource = remember { MutableInteractionSource() },
+                        ) { onToggle() },
                 )
             }
-
-            // Visible vertical divider — indicates the card has a sub-menu.
-            // HorizontalDivider was wrong here (horizontal line, thickness=0dp = invisible).
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .size(width = 1.dp, height = 28.dp)
-                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
-            )
-
-            Switch(
-                checked         = checked && isAdmin,
-                onCheckedChange = null,
-                enabled         = true,
-                modifier        = Modifier
-                    .alpha(if (isAdmin) 1f else 0.45f)
-                    .clickable { onToggle() },
-            )
         }
     }
 }
