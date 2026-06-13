@@ -45,12 +45,7 @@ import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
-import androidx.wear.compose.material3.ColumnItemType
-import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.TransformationSpec
-import androidx.wear.compose.material3.rememberResponsiveColumnPadding
-import androidx.wear.compose.material3.rememberTransformationSpec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -79,15 +74,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
     val totalCount  = remember(state.apps) { state.apps.size }
     val hiddenCount = remember(state.apps) { state.apps.count { it.isHidden } }
 
-    val spec = rememberTransformationSpec()
-
-    ScreenScaffold(
-        scrollState    = listState,
-        contentPadding = rememberResponsiveColumnPadding(
-            first = ColumnItemType.ListHeader,
-            last  = ColumnItemType.Button,
-        ),
-    ) { contentPadding ->
+    ScreenScaffold(scrollState = listState) { contentPadding ->
         if (state.isLoadingApps) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -118,8 +105,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         modifier  = Modifier
-                            .fillMaxWidth()
-                            .transformedHeight(this, spec),
+                            .fillMaxWidth(),
                     )
                 }
 
@@ -128,8 +114,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                         value         = state.appsFilter,
                         onValueChange = { vm.updateFilter(it) },
                         modifier      = Modifier
-                            .fillMaxWidth()
-                            .transformedHeight(this, spec),
+                            .fillMaxWidth(),
                     )
                 }
 
@@ -137,9 +122,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     item {
                         ListHeader(
                             modifier       = Modifier
-                                .fillMaxWidth()
-                                .transformedHeight(this, spec),
-                            transformation = SurfaceTransformation(spec),
+                                .fillMaxWidth(),
                         ) {
                             Text("用户应用 (${userApps.size})")
                         }
@@ -147,11 +130,9 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     items(userApps, key = { it.packageName }) { app ->
                         AppHideRow(
                             app      = app,
-                            spec     = spec,
                             onToggle = { vm.toggleHidden(app.packageName) },
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .transformedHeight(this, spec),
+                                .fillMaxWidth(),
                         )
                     }
                 }
@@ -160,9 +141,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     item {
                         ListHeader(
                             modifier       = Modifier
-                                .fillMaxWidth()
-                                .transformedHeight(this, spec),
-                            transformation = SurfaceTransformation(spec),
+                                .fillMaxWidth(),
                         ) {
                             Text("系统应用 (${systemApps.size})")
                         }
@@ -170,11 +149,9 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                     items(systemApps, key = { it.packageName }) { app ->
                         AppHideRow(
                             app      = app,
-                            spec     = spec,
                             onToggle = { vm.toggleHidden(app.packageName) },
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .transformedHeight(this, spec),
+                                .fillMaxWidth(),
                         )
                     }
                 }
@@ -200,13 +177,11 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
 private fun AppHideRow(
     app: AppItem,
     onToggle: () -> Unit,
-    modifier: Modifier = Modifier,
-    spec: TransformationSpec? = null,
+    modifier: Modifier = Modifier
 ) {
     Button(
         onClick        = onToggle,
         modifier       = modifier,
-        transformation = spec?.let { SurfaceTransformation(it) },
         colors   = if (app.isHidden)
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer,

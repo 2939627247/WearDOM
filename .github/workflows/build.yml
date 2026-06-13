@@ -34,13 +34,13 @@ jobs:
           distribution: 'temurin'
 
       # ── 3. Android SDK ────────────────────────────────────────────────────
-      # AGP 9.x default build-tools version for API 37
+      # AGP 9.x default build-tools version for API 36
       - name: Install Android SDK Platform 36
         run: |
           echo "y" | \
             "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-              "platforms;android-37" \
-              "build-tools;37.0.0" \
+              "platforms;android-36" \
+              "build-tools;36.0.0" \
           2>&1 | grep -Ev "^Warning|^Parsing|^\[="
 
       # ── 4. Gradle 9.5.1 ──────────────────────────────────────────────────

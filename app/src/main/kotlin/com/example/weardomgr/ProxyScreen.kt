@@ -28,11 +28,7 @@ import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.OutlinedButton
 import androidx.wear.compose.material3.ScreenScaffold
-import androidx.wear.compose.material3.ColumnItemType
-import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.rememberResponsiveColumnPadding
-import androidx.wear.compose.material3.rememberTransformationSpec
 
 @Composable
 fun ProxyScreen(vm: DeviceOwnerViewModel) {
@@ -40,15 +36,7 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
     val listState  = rememberTransformingLazyColumnState()
     val input      = state.proxyInput
 
-    val spec = rememberTransformationSpec()
-
-    ScreenScaffold(
-        scrollState    = listState,
-        contentPadding = rememberResponsiveColumnPadding(
-            first = ColumnItemType.Text,
-            last  = ColumnItemType.Button,
-        ),
-    ) { contentPadding ->
+    ScreenScaffold(scrollState = listState) { contentPadding ->
         TransformingLazyColumn(
             state               = listState,
             contentPadding      = contentPadding,

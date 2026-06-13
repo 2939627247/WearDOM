@@ -29,14 +29,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.wear.compose.material3.ColumnItemType
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
-import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.rememberResponsiveColumnPadding
-import androidx.wear.compose.material3.rememberTransformationSpec
 
 @Composable
 fun MainScreen(
@@ -49,17 +45,10 @@ fun MainScreen(
     val isAdmin      = state.isDeviceOwner
     val hiddenCount  = remember(state.apps) { state.apps.count { it.isHidden } }
     val context      = LocalContext.current
-    val spec         = rememberTransformationSpec()
 
     LaunchedEffect(Unit) { vm.refreshOwnerStatus() }
 
-    ScreenScaffold(
-        scrollState    = listState,
-        contentPadding = rememberResponsiveColumnPadding(
-            first = ColumnItemType.Text,
-            last  = ColumnItemType.Button,
-        ),
-    ) { contentPadding ->
+    ScreenScaffold(scrollState = listState) { contentPadding ->
         TransformingLazyColumn(
             state               = listState,
             contentPadding      = contentPadding,
@@ -74,8 +63,7 @@ fun MainScreen(
                     style     = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
                     modifier  = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
+                        .fillMaxWidth(),
                 )
             }
 
@@ -91,9 +79,7 @@ fun MainScreen(
                         else Toast.makeText(context, "This app is not an admin.", Toast.LENGTH_SHORT).show()
                     },
                     modifier    = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
-                    spec        = spec,
+                        .fillMaxWidth(),
                 )
             }
 
@@ -116,9 +102,7 @@ fun MainScreen(
                         }
                     },
                     modifier    = Modifier
-                        .fillMaxWidth()
-                        .transformedHeight(this, spec),
-                    spec        = spec,
+                        .fillMaxWidth(),
                 )
             }
         }
@@ -133,14 +117,12 @@ private fun FeatureCard(
     isAdmin: Boolean,
     onCardClick: () -> Unit,
     onToggle: () -> Unit,
-    modifier: Modifier = Modifier,
-    spec: androidx.wear.compose.material3.TransformationSpec? = null,
+    modifier: Modifier = Modifier
 ) {
     CompositionLocalProvider(LocalRippleConfiguration provides null) {
         FilledTonalButton(
             onClick        = onCardClick,
             modifier       = modifier.heightIn(min = 68.dp),
-            transformation = spec?.let { SurfaceTransformation(it) },
         ) {
             Row(
                 modifier              = Modifier.fillMaxWidth(),
