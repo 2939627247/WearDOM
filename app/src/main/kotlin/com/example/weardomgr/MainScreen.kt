@@ -32,7 +32,10 @@ import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.lazy.rememberTransformationSpec
+import androidx.wear.compose.material3.lazy.transformedHeight
 
 @Composable
 fun MainScreen(
@@ -45,6 +48,7 @@ fun MainScreen(
     val isAdmin      = state.isDeviceOwner
     val hiddenCount  = remember(state.apps) { state.apps.count { it.isHidden } }
     val context      = LocalContext.current
+    val spec         = rememberTransformationSpec()
 
     LaunchedEffect(Unit) { vm.refreshOwnerStatus() }
 
@@ -56,17 +60,14 @@ fun MainScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-
             item {
                 Text(
                     text      = "SmartThings",
                     style     = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
-                    modifier  = Modifier
-                        .fillMaxWidth(),
+                    modifier  = Modifier.fillMaxWidth().transformedHeight(this, spec),
                 )
             }
-
             item {
                 FeatureCard(
                     title       = "HTTP Proxy",
@@ -78,11 +79,10 @@ fun MainScreen(
                         if (isAdmin) vm.toggleProxy()
                         else Toast.makeText(context, "This app is not an admin.", Toast.LENGTH_SHORT).show()
                     },
-                    modifier    = Modifier
-                        .fillMaxWidth(),
+                    modifier              = Modifier.fillMaxWidth().transformedHeight(this, spec),
+                    surfaceTransformation = SurfaceTransformation(spec),
                 )
             }
-
             item {
                 FeatureCard(
                     title       = "App Hide",
@@ -101,8 +101,8 @@ fun MainScreen(
                             else            -> onAppHide()
                         }
                     },
-                    modifier    = Modifier
-                        .fillMaxWidth(),
+                    modifier              = Modifier.fillMaxWidth().transformedHeight(this, spec),
+                    surfaceTransformation = SurfaceTransformation(spec),
                 )
             }
         }
@@ -117,12 +117,14 @@ private fun FeatureCard(
     isAdmin: Boolean,
     onCardClick: () -> Unit,
     onToggle: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    surfaceTransformation: SurfaceTransformation? = null,
 ) {
     CompositionLocalProvider(LocalRippleConfiguration provides null) {
         FilledTonalButton(
             onClick        = onCardClick,
             modifier       = modifier.heightIn(min = 68.dp),
+            transformation = surfaceTransformation,
         ) {
             Row(
                 modifier              = Modifier.fillMaxWidth(),
@@ -136,38 +138,16 @@ private fun FeatureCard(
                         .alpha(if (isAdmin) 1f else 0.45f),
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
-                    Text(
-                        text     = title,
-                        style    = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text     = subtitle,
-                        style    = MaterialTheme.typography.labelSmall,
-                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Text(text = title,    style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(text = subtitle, style = MaterialTheme.typography.labelSmall,  maxLines = 1, overflow = TextOverflow.Ellipsis,
+                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .size(width = 1.dp, height = 28.dp)
-                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
-                )
-
+                Box(modifier = Modifier.padding(horizontal = 8.dp).size(width = 1.dp, height = 28.dp)
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)))
                 Switch(
-                    checked         = checked && isAdmin,
-                    onCheckedChange = null,
-                    enabled         = true,
-                    modifier        = Modifier
-                        .alpha(if (isAdmin) 1f else 0.45f)
-                        .clickable(
-                            indication        = null,
-                            interactionSource = remember { MutableInteractionSource() },
-                        ) { onToggle() },
+                    checked = checked && isAdmin, onCheckedChange = null, enabled = true,
+                    modifier = Modifier.alpha(if (isAdmin) 1f else 0.45f)
+                        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onToggle() },
                 )
             }
         }

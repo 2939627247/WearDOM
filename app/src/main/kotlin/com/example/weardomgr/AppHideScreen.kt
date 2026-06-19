@@ -45,7 +45,10 @@ import androidx.wear.compose.material3.CircularProgressIndicator
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.lazy.rememberTransformationSpec
+import androidx.wear.compose.material3.lazy.transformedHeight
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -53,9 +56,11 @@ import kotlinx.coroutines.withContext
 fun AppHideScreen(vm: DeviceOwnerViewModel) {
     val state     by vm.state.collectAsState()
     val listState  = rememberTransformingLazyColumnState()
+    val spec       = rememberTransformationSpec()
 
     LaunchedEffect(Unit) { vm.loadApps() }
 
+    // All remember calls unconditional — outside any if/else
     val displayedApps = remember(state.apps, state.appsFilter) {
         if (state.appsFilter.isBlank()) state.apps
         else state.apps.filter {
@@ -63,14 +68,8 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
             it.packageName.contains(state.appsFilter, ignoreCase = true)
         }
     }
-
-    // FIX: remember called unconditionally, outside if/else — Compose
-    // requires composable functions to be called on every recomposition
-    // regardless of conditions to keep the slot table consistent.
-    val userApps   = remember(displayedApps) { displayedApps.filter { !it.isSystemApp } }
-    val systemApps = remember(displayedApps) { displayedApps.filter {  it.isSystemApp } }
-
-    // FIX: memoize counts that are referenced in item bodies
+    val userApps    = remember(displayedApps) { displayedApps.filter { !it.isSystemApp } }
+    val systemApps  = remember(displayedApps) { displayedApps.filter {  it.isSystemApp } }
     val totalCount  = remember(state.apps) { state.apps.size }
     val hiddenCount = remember(state.apps) { state.apps.count { it.isHidden } }
 
@@ -79,133 +78,92 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-        } else {
-            TransformingLazyColumn(
-                state               = listState,
-                contentPadding      = contentPadding,
-                modifier            = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
+            return@ScreenScaffold
+        }
 
+        TransformingLazyColumn(
+            state = listState, contentPadding = contentPadding,
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            item {
+                Text("应用隐藏管理", style = MaterialTheme.typography.titleSmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().transformedHeight(this, spec))
+            }
+            item {
+                Text("共 $totalCount 个 · 已隐藏 $hiddenCount 个",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (hiddenCount > 0) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().transformedHeight(this, spec))
+            }
+            item {
+                AppSearchField(state.appsFilter, { vm.updateFilter(it) },
+                    Modifier.fillMaxWidth().transformedHeight(this, spec))
+            }
+            if (userApps.isNotEmpty()) {
                 item {
-                    Text(
-                        text      = "应用隐藏管理",
-                        style     = MaterialTheme.typography.titleSmall,
+                    ListHeader(
+                        modifier = Modifier.fillMaxWidth().transformedHeight(this, spec),
+                        transformation = SurfaceTransformation(spec),
+                    ) { Text("用户应用 (${userApps.size})") }
+                }
+                items(userApps, key = { it.packageName }) { app ->
+                    AppHideRow(app, { vm.toggleHidden(app.packageName) },
+                        Modifier.fillMaxWidth().transformedHeight(this, spec),
+                        SurfaceTransformation(spec))
+                }
+            }
+            if (systemApps.isNotEmpty()) {
+                item {
+                    ListHeader(
+                        modifier = Modifier.fillMaxWidth().transformedHeight(this, spec),
+                        transformation = SurfaceTransformation(spec),
+                    ) { Text("系统应用 (${systemApps.size})") }
+                }
+                items(systemApps, key = { it.packageName }) { app ->
+                    AppHideRow(app, { vm.toggleHidden(app.packageName) },
+                        Modifier.fillMaxWidth().transformedHeight(this, spec),
+                        SurfaceTransformation(spec))
+                }
+            }
+            if (displayedApps.isEmpty()) {
+                item {
+                    Text("无匹配应用", style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center,
-                        modifier  = Modifier.fillMaxWidth(),
-                    )
-                }
-
-                item {
-                    Text(
-                        text  = "共 $totalCount 个 · 已隐藏 $hiddenCount 个",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (hiddenCount > 0) MaterialTheme.colorScheme.error
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier  = Modifier
-                            .fillMaxWidth(),
-                    )
-                }
-
-                item {
-                    AppSearchField(
-                        value         = state.appsFilter,
-                        onValueChange = { vm.updateFilter(it) },
-                        modifier      = Modifier
-                            .fillMaxWidth(),
-                    )
-                }
-
-                if (userApps.isNotEmpty()) {
-                    item {
-                        ListHeader(
-                            modifier       = Modifier
-                                .fillMaxWidth(),
-                        ) {
-                            Text("用户应用 (${userApps.size})")
-                        }
-                    }
-                    items(userApps, key = { it.packageName }) { app ->
-                        AppHideRow(
-                            app      = app,
-                            onToggle = { vm.toggleHidden(app.packageName) },
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                        )
-                    }
-                }
-
-                if (systemApps.isNotEmpty()) {
-                    item {
-                        ListHeader(
-                            modifier       = Modifier
-                                .fillMaxWidth(),
-                        ) {
-                            Text("系统应用 (${systemApps.size})")
-                        }
-                    }
-                    items(systemApps, key = { it.packageName }) { app ->
-                        AppHideRow(
-                            app      = app,
-                            onToggle = { vm.toggleHidden(app.packageName) },
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                        )
-                    }
-                }
-
-                if (displayedApps.isEmpty()) {
-                    item {
-                        Text(
-                            text      = "无匹配应用",
-                            style     = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Center,
-                            modifier  = Modifier.fillMaxWidth(),
-                        )
-                    }
+                        modifier = Modifier.fillMaxWidth().transformedHeight(this, spec))
                 }
             }
         }
     }
 }
 
-// ─────────────────────────── AppHideRow ──────────────────────────────────────
-
 @Composable
 private fun AppHideRow(
-    app: AppItem,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier
+    app: AppItem, onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+    surfaceTransformation: SurfaceTransformation? = null,
 ) {
     Button(
-        onClick        = onToggle,
-        modifier       = modifier,
-        colors   = if (app.isHidden)
+        onClick = onToggle, modifier = modifier,
+        transformation = surfaceTransformation,
+        colors = if (app.isHidden)
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor   = MaterialTheme.colorScheme.onErrorContainer,
-            )
-        else
-            ButtonDefaults.filledTonalButtonColors(),
+                contentColor   = MaterialTheme.colorScheme.onErrorContainer)
+        else ButtonDefaults.filledTonalButtonColors(),
     ) {
-        Row(
-            modifier              = Modifier.fillMaxWidth(),
-            verticalAlignment     = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AppIcon(packageName = app.packageName, size = 32.dp)
-
-            Column(modifier = Modifier.weight(1f)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AppIcon(app.packageName, 32.dp)
+            Column(Modifier.weight(1f)) {
+                Text(app.label, style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    text     = app.label,
-                    style    = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text  = when {
+                    text = when {
                         app.isHidden    -> "已隐藏"
                         app.isSystemApp -> "系统 · 可见"
                         else            -> "可见"
@@ -218,96 +176,46 @@ private fun AppHideRow(
                     },
                 )
             }
-
-            Text(
-                text  = if (app.isHidden) "●" else "○",
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (app.isHidden)
-                    MaterialTheme.colorScheme.error
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Text(if (app.isHidden) "●" else "○", style = MaterialTheme.typography.bodyMedium,
+                color = if (app.isHidden) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
-
-// ─────────────────────────── AppIcon ─────────────────────────────────────────
 
 @Composable
 private fun AppIcon(packageName: String, size: Dp) {
     val context = LocalContext.current
-    // FIX: derive pixel size from actual screen density instead of
-    // hardcoding size * 3, which over/under-samples on non-3x screens.
-    val sizePx = with(LocalDensity.current) { size.roundToPx() }
-
+    val sizePx  = with(LocalDensity.current) { size.roundToPx() }
     val icon by produceState<Bitmap?>(null, packageName) {
         value = withContext(Dispatchers.IO) {
             runCatching {
-                context.packageManager
-                    .getApplicationIcon(packageName)
+                context.packageManager.getApplicationIcon(packageName)
                     .toBitmap(width = sizePx, height = sizePx)
             }.getOrNull()
         }
     }
-
-    Box(
-        modifier         = Modifier.size(size).clip(CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (icon != null) {
-            Image(
-                bitmap             = icon!!.asImageBitmap(),
-                contentDescription = null,
-                modifier           = Modifier.fillMaxSize(),
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            )
-        }
+    Box(Modifier.size(size).clip(CircleShape), contentAlignment = Alignment.Center) {
+        if (icon != null)
+            Image(icon!!.asImageBitmap(), null, Modifier.fillMaxSize())
+        else
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh))
     }
 }
 
-// ─────────────────────────── AppSearchField ──────────────────────────────────
-
 @Composable
-private fun AppSearchField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val shape       = RoundedCornerShape(20.dp)
-    val borderColor = MaterialTheme.colorScheme.outline
-    val bgColor     = MaterialTheme.colorScheme.surfaceContainerHigh
-
-    Box(
-        modifier = modifier
-            .background(color = bgColor, shape = shape)
-            .border(width = 1.dp, color = borderColor, shape = shape)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-    ) {
-        if (value.isEmpty()) {
-            Text(
-                text  = "搜索应用…",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            )
-        }
-        BasicTextField(
-            value           = value,
-            onValueChange   = onValueChange,
-            singleLine      = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text,
-                imeAction    = ImeAction.Search,
-            ),
-            textStyle   = MaterialTheme.typography.bodySmall.copy(
-                color = MaterialTheme.colorScheme.onSurface,
-            ),
+private fun AppSearchField(value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    Box(modifier
+        .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(20.dp))
+        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
+        .padding(horizontal = 12.dp, vertical = 6.dp)) {
+        if (value.isEmpty())
+            Text("搜索应用…", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+        BasicTextField(value = value, onValueChange = onValueChange, singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Search),
+            textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            modifier    = Modifier.fillMaxWidth(),
-        )
+            modifier = Modifier.fillMaxWidth())
     }
 }
