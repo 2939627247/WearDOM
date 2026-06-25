@@ -160,6 +160,7 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
             // Step 2 — parallel: resolve labels + hidden state for all apps at once.
             // Sequential resolution of 100+ apps can take several seconds on a watch;
             // parallel cuts it to roughly one iteration's worth of time.
+            // Sort happens on IO thread — keeps main thread free during list completion
             val apps = withContext(Dispatchers.IO) {
                 coroutineScope {
                     rawList.map { info ->
@@ -176,15 +177,12 @@ class DeviceOwnerViewModel(app: Application) : AndroidViewModel(app) {
                             }.getOrNull()
                         }
                     }.awaitAll()
-                }.filterNotNull()
+                }
+                .filterNotNull()
+                .sortedWith(compareBy({ it.isSystemApp }, { it.label.lowercase() }))
             }
 
-            _state.update {
-                it.copy(
-                    apps          = apps.sortedWith(compareBy({ it.isSystemApp }, { it.label.lowercase() })),
-                    isLoadingApps = false,
-                )
-            }
+            _state.update { it.copy(apps = apps, isLoadingApps = false) }
         }
     }
 
