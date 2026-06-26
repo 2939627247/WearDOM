@@ -80,9 +80,6 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
     val totalCount  = remember(state.apps)    { state.apps.size }
     val hiddenCount = remember(state.apps)    { state.apps.count { it.isHidden } }
 
-    // Memoize so SurfaceTransformation is not re-allocated on every recomposition
-    val surfaceTransformation = remember(spec) { SurfaceTransformation(spec) }
-
     ScreenScaffold(scrollState = listState) { contentPadding ->
 
         // Show full-screen spinner only on FIRST load (list is still empty).
@@ -135,7 +132,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                 item {
                     ListHeader(
                         modifier       = Modifier.fillMaxWidth().transformedHeight(this, spec),
-                        transformation = surfaceTransformation,
+                        transformation = SurfaceTransformation(spec),
                     ) { Text("用户应用 (${userApps.size})") }
                 }
                 items(userApps, key = { it.packageName }) { app ->
@@ -143,7 +140,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                         app                   = app,
                         onToggle              = { vm.toggleHidden(app.packageName) },
                         modifier              = Modifier.fillMaxWidth().transformedHeight(this, spec),
-                        surfaceTransformation = surfaceTransformation,
+                        transformation = SurfaceTransformation(spec),
                     )
                 }
             }
@@ -152,7 +149,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                 item {
                     ListHeader(
                         modifier       = Modifier.fillMaxWidth().transformedHeight(this, spec),
-                        transformation = surfaceTransformation,
+                        transformation = SurfaceTransformation(spec),
                     ) { Text("系统应用 (${systemApps.size})") }
                 }
                 items(systemApps, key = { it.packageName }) { app ->
@@ -160,7 +157,7 @@ fun AppHideScreen(vm: DeviceOwnerViewModel) {
                         app                   = app,
                         onToggle              = { vm.toggleHidden(app.packageName) },
                         modifier              = Modifier.fillMaxWidth().transformedHeight(this, spec),
-                        surfaceTransformation = surfaceTransformation,
+                        transformation = SurfaceTransformation(spec),
                     )
                 }
             }
@@ -186,12 +183,12 @@ private fun AppHideRow(
     app: AppItem,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
-    surfaceTransformation: SurfaceTransformation? = null,
+    transformation: SurfaceTransformation? = null,
 ) {
     Button(
         onClick        = onToggle,
         modifier       = modifier,
-        transformation = surfaceTransformation,
+        transformation = transformation,
         colors         = if (app.isHidden)
             ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer,
