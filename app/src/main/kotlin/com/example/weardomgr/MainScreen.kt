@@ -77,7 +77,6 @@ fun MainScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .transformedHeight(this, spec),
-                    spec     = spec,
                 )
             }
 
@@ -104,7 +103,6 @@ fun MainScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .transformedHeight(this, spec),
-                    spec     = spec,
                 )
             }
         }
@@ -125,19 +123,16 @@ private fun FeatureCard(
     onCardClick: () -> Unit,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
-    spec: androidx.wear.compose.material3.lazy.TransformationSpec? = null,
 ) {
+    val spec = rememberTransformationSpec()
     SplitSwitchButton(
-        checked                = checked,
-        // ignore new-value Boolean — our onToggle owns the state logic
-        onCheckedChange        = { onToggle() },
+        checked                  = checked,
+        onCheckedChange          = { onToggle() },
         toggleContentDescription = title,
-        onContainerClick       = onCardClick,
-        modifier               = modifier,
-        // Container always enabled so navigation works even without DO permission;
-        // permission check is handled inside onToggle via Toast
-        enabled                = true,
-        transformation         = spec?.let { SurfaceTransformation(it) },
+        onContainerClick         = onCardClick,
+        modifier                 = modifier,
+        enabled                  = true,
+        transformation           = SurfaceTransformation(spec),
         label = {
             Column(
                 // Dim label when DO permission is absent as visual hint
