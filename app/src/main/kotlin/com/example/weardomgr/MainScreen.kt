@@ -1,21 +1,10 @@
 package com.example.weardomgr
 
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.wear.compose.material3.LocalRippleConfiguration
-import androidx.wear.compose.material3.Switch
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,9 +18,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.wear.compose.material3.FilledTonalButton
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.SplitSwitchButton
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
@@ -60,14 +49,18 @@ fun MainScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+
             item {
                 Text(
                     text      = "SmartThings",
                     style     = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
-                    modifier  = Modifier.fillMaxWidth().transformedHeight(this, spec),
+                    modifier  = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
                 )
             }
+
             item {
                 FeatureCard(
                     title       = "HTTP Proxy",
@@ -77,12 +70,17 @@ fun MainScreen(
                     onCardClick = onProxy,
                     onToggle    = {
                         if (isAdmin) vm.toggleProxy()
-                        else Toast.makeText(context, "This app is not an admin.", Toast.LENGTH_SHORT).show()
+                        else Toast.makeText(
+                            context, "This app is not an admin.", Toast.LENGTH_SHORT
+                        ).show()
                     },
-                    modifier              = Modifier.fillMaxWidth().transformedHeight(this, spec),
-                    surfaceTransformation = SurfaceTransformation(spec),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
+                    spec     = spec,
                 )
             }
+
             item {
                 FeatureCard(
                     title       = "App Hide",
@@ -95,19 +93,28 @@ fun MainScreen(
                     isAdmin     = isAdmin,
                     onCardClick = onAppHide,
                     onToggle    = {
-                        if (!isAdmin) Toast.makeText(context, "This app is not an admin.", Toast.LENGTH_SHORT).show()
+                        if (!isAdmin) Toast.makeText(
+                            context, "This app is not an admin.", Toast.LENGTH_SHORT
+                        ).show()
                         else when {
                             hiddenCount > 0 -> vm.unhideAll()
                             else            -> onAppHide()
                         }
                     },
-                    modifier              = Modifier.fillMaxWidth().transformedHeight(this, spec),
-                    surfaceTransformation = SurfaceTransformation(spec),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
+                    spec     = spec,
                 )
             }
         }
     }
 }
+
+// ── FeatureCard ───────────────────────────────────────────────────────────────
+// SplitSwitchButton is the correct Wear M3 component for a card with two
+// independent tap areas: label area → sub-menu navigation, switch area → toggle.
+// No custom Switch, no ripple workarounds, no manual clickable handling.
 
 @Composable
 private fun FeatureCard(
@@ -118,38 +125,39 @@ private fun FeatureCard(
     onCardClick: () -> Unit,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
-    surfaceTransformation: SurfaceTransformation? = null,
+    spec: androidx.wear.compose.material3.lazy.TransformationSpec? = null,
 ) {
-    CompositionLocalProvider(LocalRippleConfiguration provides null) {
-        FilledTonalButton(
-            onClick        = onCardClick,
-            modifier       = modifier.heightIn(min = 68.dp),
-            transformation = surfaceTransformation,
-        ) {
-            Row(
-                modifier              = Modifier.fillMaxWidth(),
-                verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+    SplitSwitchButton(
+        checked                = checked,
+        // ignore new-value Boolean — our onToggle owns the state logic
+        onCheckedChange        = { onToggle() },
+        toggleContentDescription = title,
+        onContainerClick       = onCardClick,
+        modifier               = modifier,
+        // Container always enabled so navigation works even without DO permission;
+        // permission check is handled inside onToggle via Toast
+        enabled                = true,
+        transformation         = spec?.let { SurfaceTransformation(it) },
+        label = {
+            Column(
+                // Dim label when DO permission is absent as visual hint
+                modifier            = Modifier.alpha(if (isAdmin) 1f else 0.45f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
-                Column(
-                    modifier            = Modifier
-                        .weight(1f)
-                        .padding(vertical = 4.dp)
-                        .alpha(if (isAdmin) 1f else 0.45f),
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
-                ) {
-                    Text(text = title,    style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(text = subtitle, style = MaterialTheme.typography.labelSmall,  maxLines = 1, overflow = TextOverflow.Ellipsis,
-                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Box(modifier = Modifier.padding(horizontal = 8.dp).size(width = 1.dp, height = 28.dp)
-                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)))
-                Switch(
-                    checked = checked && isAdmin, onCheckedChange = null, enabled = true,
-                    modifier = Modifier.alpha(if (isAdmin) 1f else 0.45f)
-                        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { onToggle() },
+                Text(
+                    text     = title,
+                    style    = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text     = subtitle,
+                    style    = MaterialTheme.typography.labelSmall,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-        }
-    }
+        },
+    )
 }
