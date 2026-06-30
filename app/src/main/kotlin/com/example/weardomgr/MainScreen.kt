@@ -21,7 +21,6 @@ import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.SplitSwitchButton
-import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
@@ -124,7 +123,6 @@ private fun FeatureCard(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val spec = rememberTransformationSpec()
     SplitSwitchButton(
         checked                  = checked,
         onCheckedChange          = { onToggle() },
@@ -132,7 +130,6 @@ private fun FeatureCard(
         onContainerClick         = onCardClick,
         modifier                 = modifier,
         enabled                  = true,
-        transformation           = SurfaceTransformation(spec),
         label = {
             Column(
                 // Dim label when DO permission is absent as visual hint
