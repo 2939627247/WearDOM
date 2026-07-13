@@ -61,6 +61,19 @@ fun MainScreen(
             }
 
             item {
+                Text(
+                    text      = if (isAdmin) "Device Owner 已启用" else "非管理员模式",
+                    style     = MaterialTheme.typography.labelSmall,
+                    color     = if (isAdmin) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier  = Modifier
+                        .fillMaxWidth()
+                        .transformedHeight(this, spec),
+                )
+            }
+
+            item {
                 FeatureCard(
                     title       = "HTTP Proxy",
                     subtitle    = state.activeProxy?.toString() ?: "未配置",

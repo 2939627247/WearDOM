@@ -11,6 +11,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +38,16 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
     val listState  = rememberTransformingLazyColumnState()
     val input      = state.proxyInput
     val spec       = rememberTransformationSpec()
+
+    // Only start showing validation errors after the user has tried to apply
+    // once — avoids nagging red text while they're still mid-typing.
+    var attemptedApply by remember { mutableStateOf(false) }
+
+    val hostError = if (attemptedApply && input.host.isBlank())
+        "请输入代理主机" else null
+    val portError = if (attemptedApply &&
+        input.port.toIntOrNull()?.let { it in 1..65535 } != true)
+        "端口需为 1–65535 之间的数字" else null
 
     ScreenScaffold(scrollState = listState) { contentPadding ->
         TransformingLazyColumn(
@@ -77,6 +90,7 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     label         = "代理主机",
                     value         = input.host,
                     hint          = "192.168.1.1 或 proxy.corp.com",
+                    error         = hostError,
                     keyboardType  = KeyboardType.Uri,
                     imeAction     = ImeAction.Next,
                     onValueChange = { vm.updateProxyInput(input.copy(host = it)) },
@@ -91,6 +105,7 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     label         = "端口",
                     value         = input.port,
                     hint          = "1–65535，例如 8080",
+                    error         = portError,
                     keyboardType  = KeyboardType.Number,
                     imeAction     = ImeAction.Next,
                     onValueChange = { vm.updateProxyInput(input.copy(port = it)) },
@@ -105,6 +120,7 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
                     label         = "排除列表（可选）",
                     value         = input.exclusions,
                     hint          = "localhost,*.local",
+                    error         = null,
                     keyboardType  = KeyboardType.Text,
                     imeAction     = ImeAction.Done,
                     onValueChange = { vm.updateProxyInput(input.copy(exclusions = it)) },
@@ -116,7 +132,10 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
 
             item {
                 Button(
-                    onClick  = { vm.applyProxy() },
+                    onClick  = {
+                        attemptedApply = true
+                        vm.applyProxy()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .transformedHeight(this, spec),
@@ -125,7 +144,10 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
 
             item {
                 OutlinedButton(
-                    onClick  = { vm.clearProxy() },
+                    onClick  = {
+                        attemptedApply = false
+                        vm.clearProxy()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .transformedHeight(this, spec),
@@ -141,21 +163,30 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
 //   • No border — a subtle filled background reads better on a small round
 //     display than a phone-style outlined box
 //   • MaterialTheme.shapes.small keeps the corner radius consistent with
-//     the rest of Wear M3 (was a hardcoded RoundedCornerShape(10.dp))
+//     the rest of Wear M3
 //   • decorationBox replaces the old Box+Text placeholder overlay hack
 //   • Label uses primary color so each field is clearly anchored while
 //     scanning down the list
+//   • error: when non-null, background/label tint to the error color and
+//     a short message appears below — previously an invalid port would
+//     silently no-op with zero feedback, which read as "broken"
 
 @Composable
 private fun ProxyInputField(
     label: String,
     value: String,
     hint: String,
+    error: String?,
     onValueChange: (String) -> Unit,
     keyboardType: KeyboardType = KeyboardType.Text,
     imeAction: ImeAction       = ImeAction.Next,
     modifier: Modifier         = Modifier,
 ) {
+    val hasError    = error != null
+    val labelColor  = if (hasError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+    val fieldBg     = if (hasError) MaterialTheme.colorScheme.errorContainer
+                       else MaterialTheme.colorScheme.surfaceContainer
+
     Column(
         modifier            = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -163,7 +194,7 @@ private fun ProxyInputField(
         Text(
             text  = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
+            color = labelColor,
         )
 
         BasicTextField(
@@ -184,7 +215,7 @@ private fun ProxyInputField(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(MaterialTheme.shapes.small)
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .background(fieldBg)
                         .padding(horizontal = 12.dp, vertical = 9.dp),
                 ) {
                     if (value.isEmpty()) {
@@ -198,5 +229,13 @@ private fun ProxyInputField(
                 }
             },
         )
+
+        if (error != null) {
+            Text(
+                text  = error,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
 }
