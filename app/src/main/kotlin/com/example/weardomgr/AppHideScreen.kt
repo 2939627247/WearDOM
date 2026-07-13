@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.util.LruCache
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,8 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
@@ -43,6 +43,7 @@ import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.ScreenScaffold
@@ -277,6 +278,9 @@ private fun AppIcon(packageName: String, size: Dp) {
 }
 
 // ── AppSearchField ────────────────────────────────────────────────────────────
+//
+// Same decorationBox pattern as ProxyInputField — no border, shapes.small
+// corner radius, search icon anchors the field visually.
 
 @Composable
 private fun AppSearchField(
@@ -284,35 +288,46 @@ private fun AppSearchField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape       = RoundedCornerShape(20.dp)
-    val borderColor = MaterialTheme.colorScheme.outline
-    val bgColor     = MaterialTheme.colorScheme.surfaceContainerHigh
-    Box(
-        modifier = modifier
-            .background(color = bgColor, shape = shape)
-            .border(width = 1.dp, color = borderColor, shape = shape)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-    ) {
-        if (value.isEmpty()) {
-            Text(
-                text  = "搜索应用…",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            )
-        }
-        BasicTextField(
-            value           = value,
-            onValueChange   = onValueChange,
-            singleLine      = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text,
-                imeAction    = ImeAction.Search,
-            ),
-            textStyle   = MaterialTheme.typography.bodySmall.copy(
-                color = MaterialTheme.colorScheme.onSurface,
-            ),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            modifier    = Modifier.fillMaxWidth(),
-        )
-    }
+    BasicTextField(
+        value           = value,
+        onValueChange   = onValueChange,
+        singleLine      = true,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Text,
+            imeAction    = ImeAction.Search,
+        ),
+        textStyle   = MaterialTheme.typography.bodySmall.copy(
+            color = MaterialTheme.colorScheme.onSurface,
+        ),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        modifier    = modifier,
+        decorationBox = { innerTextField ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Icon(
+                    imageVector        = Icons.Default.Search,
+                    contentDescription = null,
+                    tint               = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier           = Modifier.size(16.dp),
+                )
+                Box(modifier = Modifier.weight(1f)) {
+                    if (value.isEmpty()) {
+                        Text(
+                            text  = "搜索应用",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                    }
+                    innerTextField()
+                }
+            }
+        },
+    )
 }
