@@ -78,6 +78,7 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.foundation)
+    implementation(libs.compose.material.icons.core)
     implementation(libs.datastore.preferences)
     implementation(libs.compose.runtime)
 
