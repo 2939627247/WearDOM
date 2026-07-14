@@ -1,9 +1,11 @@
 package com.example.weardomgr
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -12,7 +14,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,7 +42,13 @@ fun MainScreen(
     val context      = LocalContext.current
     val spec         = rememberTransformationSpec()
 
-    LaunchedEffect(Unit) { vm.refreshOwnerStatus() }
+    // Load the app list here too (not just on AppHideScreen entry) so the
+    // hidden-count subtitle is accurate as soon as the home screen opens,
+    // instead of confidently claiming "无隐藏应用" before anything is known.
+    LaunchedEffect(Unit) {
+        vm.refreshOwnerStatus()
+        vm.loadApps()
+    }
 
     ScreenScaffold(scrollState = listState) { contentPadding ->
         TransformingLazyColumn(
@@ -71,6 +81,16 @@ fun MainScreen(
                         .fillMaxWidth()
                         .transformedHeight(this, spec),
                 )
+            }
+
+            if (!isAdmin) {
+                item {
+                    DeviceOwnerSetupHint(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .transformedHeight(this, spec),
+                    )
+                }
             }
 
             item {
@@ -118,6 +138,39 @@ fun MainScreen(
                 )
             }
         }
+    }
+}
+
+// ── DeviceOwnerSetupHint ─────────────────────────────────────────────────────
+// Shown only when the app is not yet Device Owner. Displays the exact ADB
+// command (from WearDeviceAdminReceiver's own doc comment) needed to
+// activate it — without this, a first-time user just sees dimmed cards
+// with no path forward.
+
+@Composable
+private fun DeviceOwnerSetupHint(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.small)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text  = "在电脑上通过 ADB 运行：",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text  = "adb shell dpm set-device-owner",
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text  = "com.example.weardomgr/.WearDeviceAdminReceiver",
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 

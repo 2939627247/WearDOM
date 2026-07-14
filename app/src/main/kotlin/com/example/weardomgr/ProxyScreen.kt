@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +32,7 @@ import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import androidx.wear.compose.material3.lazy.rememberTransformationSpec
 import androidx.wear.compose.material3.lazy.transformedHeight
+import kotlinx.coroutines.delay
 
 @Composable
 fun ProxyScreen(vm: DeviceOwnerViewModel) {
@@ -42,6 +44,17 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
     // Only start showing validation errors after the user has tried to apply
     // once — avoids nagging red text while they're still mid-typing.
     var attemptedApply by remember { mutableStateOf(false) }
+
+    // "清除代理" is the app's one instant destructive action — require a
+    // second tap within ~2.5s to confirm, rather than firing immediately
+    // on a single accidental tap.
+    var confirmingClear by remember { mutableStateOf(false) }
+    LaunchedEffect(confirmingClear) {
+        if (confirmingClear) {
+            delay(2500)
+            confirmingClear = false
+        }
+    }
 
     val hostError = if (attemptedApply && input.host.isBlank())
         "请输入代理主机" else null
@@ -145,13 +158,18 @@ fun ProxyScreen(vm: DeviceOwnerViewModel) {
             item {
                 OutlinedButton(
                     onClick  = {
-                        attemptedApply = false
-                        vm.clearProxy()
+                        if (confirmingClear) {
+                            attemptedApply   = false
+                            confirmingClear  = false
+                            vm.clearProxy()
+                        } else {
+                            confirmingClear = true
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .transformedHeight(this, spec),
-                ) { Text("清除代理") }
+                ) { Text(if (confirmingClear) "再次点击确认清除" else "清除代理") }
             }
         }
     }
