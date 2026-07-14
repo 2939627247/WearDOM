@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -66,3 +66,23 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 30
+
+      # ── 7. Publish to a GitHub Release ──────────────────────────────────
+      # Workflow-run artifacts are stored on Azure Blob storage, which is
+      # not reachable from every environment. Release assets are served
+      # from release-assets.githubusercontent.com instead, so this makes
+      # the APK downloadable everywhere the artifact above is not.
+      # Only runs on pushes to main (not PRs) — moving 'latest-build' tag
+      # is overwritten each time so there's always exactly one current APK.
+      - name: Publish APK to 'latest-build' release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          gh release delete latest-build --yes --cleanup-tag || true
+          gh release create latest-build "$APK_PATH" \
+            --repo "${{ github.repository }}" \
+            --title "Latest build ($(date -u +%Y-%m-%d) — ${{ github.sha }})" \
+            --notes "Automated debug-signed release APK from commit ${{ github.sha }}." \
+            --prerelease
